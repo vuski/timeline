@@ -90,3 +90,59 @@ describe("파일 받는 법 안내", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 });
+
+describe("개인정보 처리방침", () => {
+  const openPriv = () => {
+    show({ phase: "idle" });
+    fireEvent.click(screen.getByRole("button", { name: /^개인정보 처리방침$|^Privacy$/ }));
+  };
+
+  it("처음에는 떠 있지 않다 — 링크를 눌러야 열린다", () => {
+    show({ phase: "idle" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  /*
+   * 사이트를 벗어나면 안 된다. 처리방침을 보려고 눌렀는데 깃허브의
+   * 마크다운 소스 화면으로 튕겨 나가면 곤란하다.
+   */
+  it("바깥으로 나가지 않고 그 자리에서 열린다", () => {
+    openPriv();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  /*
+   * 이 앱을 쓰는 이유가 여기 걸려 있다 — 이 문장이 빠지면 처리방침을
+   * 두는 의미가 없다.
+   */
+  it("데이터가 나가지 않는다는 것을 가장 먼저 말한다", () => {
+    openPriv();
+    expect(
+      screen.getByText(/전송되지 않습니다|never uploaded anywhere/),
+    ).toBeInTheDocument();
+  });
+
+  /* 앱이 대신 없애 줄 수 없는 유일한 위험이라 반드시 알려야 한다 */
+  it("공용 컴퓨터에서는 파일을 지우라고 알린다", () => {
+    openPriv();
+    expect(screen.getByText(/휴지통|Recycle Bin/)).toBeInTheDocument();
+  });
+
+  /* 쿠키를 쓰는 쪽이라 고지 의무가 무겁다 — 끄는 법까지 적는다 */
+  it("통계에 쿠키를 쓴다는 것과 끄는 법을 적는다", () => {
+    openPriv();
+    expect(screen.getByText(/쿠키|cookies/)).toBeInTheDocument();
+    expect(screen.getByText(/광고 차단기|ad blocker/)).toBeInTheDocument();
+  });
+
+  it("제3자 요청(CARTO)을 숨기지 않는다", () => {
+    openPriv();
+    expect(screen.getByText(/cartocdn/)).toBeInTheDocument();
+  });
+
+  it("닫으면 사라진다", () => {
+    openPriv();
+    fireEvent.click(screen.getByRole("button", { name: /^닫기$|^Close$/ }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+});

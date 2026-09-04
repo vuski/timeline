@@ -26,6 +26,7 @@ export default function DropZone({ state, onFile }: Props) {
   const { t } = useT();
   const [over, setOver] = useState(false);
   const [help, setHelp] = useState(false);
+  const [priv, setPriv] = useState(false);
   const busy = state.phase === "reading" || state.phase === "parsing";
 
   useEffect(() => {
@@ -36,6 +37,15 @@ export default function DropZone({ state, onFile }: Props) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [help]);
+
+  useEffect(() => {
+    if (!priv) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPriv(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [priv]);
 
   return (
     <div
@@ -96,7 +106,17 @@ export default function DropZone({ state, onFile }: Props) {
         * 이 앱을 쓰는 이유 자체라 파일을 고르기 전에 보여야 한다.
         * "믿으세요" 가 아니라 소스를 보라고 가리키는 게 핵심이다.
         */}
-      <p className="dropzone-privacy">{t("drop.privacy")}</p>
+      <p className="dropzone-privacy">
+        {t("drop.privacy")}{" "}
+        {/*
+          * 사이트를 벗어나지 않는다 — 처리방침을 보려고 눌렀는데 마크다운
+          * 소스 화면으로 튕겨 나가면 곤란하다. 생김새는 링크(밑줄)로 두되
+          * 하는 일은 팝업 열기라 button 으로 만든다.
+          */}
+        <button className="dropzone-privacy-link" onClick={() => setPriv(true)}>
+          {t("drop.privacyLink")}
+        </button>
+      </p>
 
       {/*
         * 파일을 어디서 받는지가 첫 관문이다 — 휴대폰에서 내보내야 하므로
@@ -152,9 +172,67 @@ export default function DropZone({ state, onFile }: Props) {
             <p className="howto-steps">{t("drop.howtoIosSteps")}</p>
 
             <p className="howto-result">{t("drop.howtoResult")}</p>
+            {/*
+              * 파일을 막 내려받으려는 시점이라 가장 잘 읽히는 자리다.
+              * 앱은 파일을 가져가지 않지만 내려받은 파일 자체는 그 컴퓨터에
+              * 남는다 — 이 앱이 대신 없애 줄 수 없는 유일한 위험이다.
+              */}
+            <p className="howto-wipe">{t("drop.howtoWipe")}</p>
 
             <button className="howto-close" onClick={() => setHelp(false)}>
               {t("drop.howtoClose")}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {priv && (
+        <div
+          className="howto"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("drop.privTitle")}
+          onClick={() => setPriv(false)}
+        >
+          <div className="howto-body" onClick={(e) => e.stopPropagation()}>
+            <h2 className="howto-title">{t("drop.privTitle")}</h2>
+            <p className="howto-warn">{t("drop.privLead")}</p>
+            <p className="howto-steps">{t("drop.privVerify")}</p>
+
+            <h3 className="howto-h">{t("drop.privSharedH")}</h3>
+            <p className="howto-steps">{t("drop.privShared")}</p>
+
+            <h3 className="howto-h">{t("drop.privOutH")}</h3>
+            <p className="howto-steps">{t("drop.privMap")}</p>
+            <p className="howto-steps">{t("drop.privGa")}</p>
+            <p className="howto-steps">{t("drop.privShare")}</p>
+
+            <h3 className="howto-h">{t("drop.privStoreH")}</h3>
+            <p className="howto-steps">{t("drop.privStore")}</p>
+
+            {/* 전문은 저장소에 둔다 — 수정 이력이 공개되는 이점이 있다 */}
+            <p className="howto-result">
+              <a
+                href="https://github.com/vuski/timeline/blob/main/PRIVACY.md"
+                target="_blank"
+                rel="noreferrer noopener"
+              >
+                {t("drop.privFull")}
+              </a>
+            </p>
+            {/* 문의처 — 이슈로 받는다. 회사 홈페이지는 연락 수단이 아니다 */}
+            <p className="howto-steps">
+              <a
+                href="https://github.com/vuski/timeline/issues"
+                target="_blank"
+                rel="noreferrer noopener"
+              >
+                {t("drop.privContact")}
+              </a>
+            </p>
+
+            <button className="howto-close" onClick={() => setPriv(false)}>
+              {t("drop.privClose")}
             </button>
           </div>
         </div>

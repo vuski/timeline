@@ -221,3 +221,35 @@
   align-self: flex-end;
   margin-top: var(--sp-2);
 }
+
+/* 공용 컴퓨터 경고 — 안내 팝업의 마지막 줄, 경고조로 살짝 띄운다 */
+.howto-wipe {
+  margin: var(--sp-3) 0 0;
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+
+/*
+ * 처리방침 — 하는 일은 팝업 열기라 button 이지만 생김새는 링크다.
+ * 버튼 기본 모양(테두리·배경·패딩)을 걷어내야 본문에 섞인 밑줄 링크가 된다.
+ */
+.dropzone-privacy-link {
+  padding: 0;
+  border: none;
+  background: none;
+  min-height: auto;
+  color: var(--text-dim);
+  font: inherit;
+  text-decoration: underline;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .dropzone-privacy-link:hover {
+    color: var(--text);
+  }
+}
