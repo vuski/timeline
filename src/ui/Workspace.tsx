@@ -618,7 +618,14 @@ ${formatAt(d.startMs, d.offsetMin)} ${offsetLabel(d.offsetMin)}`
             </button>
           )}
 
-          <button className="ws-tool" onClick={() => setSharing(true)} title={t("share.button")}>
+          <button
+            className="ws-tool"
+            onClick={() => {
+              track("share_open");
+              setSharing(true);
+            }}
+            title={t("share.button")}
+          >
             <IconShare />
             {t("share.button")}
           </button>

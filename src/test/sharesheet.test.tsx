@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ShareSheet from "../share/ShareSheet";
+import * as analytics from "../analytics";
 import { I18nProvider } from "../i18n";
 
 const map = {
@@ -130,5 +131,66 @@ describe("ShareSheet", () => {
     vi.stubGlobal("navigator", {});
     show(() => null);
     expect(await screen.findByRole("alert")).toBeInTheDocument();
+  });
+});
+
+/*
+ * 통계 이벤트 — GA 셰이더 버그를 겪은 뒤로, "심었다고 믿는 것"과
+ * "실제로 나가는 것"을 갈라서 본다.
+ *
+ * 모듈을 다시 불러오는 대신 track 만 감시한다. resetModules 로 다시
+ * 부르면 이 파일이 URL 을 흉내낸 객체로 바꿔 둔 탓에 모듈 초기화가
+ * 터진다 — 검사하려는 것과 무관한 실패다.
+ */
+describe("ShareSheet 통계", () => {
+  it("네이티브 시트로 나가면 via=native 로 센다", async () => {
+    const track = vi.spyOn(analytics, "track").mockImplementation(() => {});
+    vi.stubGlobal("navigator", {
+      share: vi.fn().mockResolvedValue(undefined),
+      canShare: () => true,
+    });
+
+    show();
+    fireEvent.click(await screen.findByRole("button", { name: /^공유하기$|^Share$/ }));
+
+    await waitFor(() =>
+      expect(track).toHaveBeenCalledWith("share_to", { app: "native", via: "native" }),
+    );
+    track.mockRestore();
+  });
+
+  it("이미지 저장 버튼은 via=save 로 센다", async () => {
+    const track = vi.spyOn(analytics, "track").mockImplementation(() => {});
+    vi.stubGlobal("navigator", {});
+
+    show();
+    fireEvent.click(await screen.findByRole("button", { name: /이미지 저장|Save image/ }));
+
+    await waitFor(() =>
+      expect(track).toHaveBeenCalledWith("share_to", { app: "file", via: "save" }),
+    );
+    track.mockRestore();
+  });
+
+  /*
+   * 이 앱의 신뢰 근거는 "위치 데이터가 브라우저 밖으로 안 나간다" 이다.
+   * 꼬리표에 좌표·시각·사용자 문구가 섞이면 그 약속이 깨지므로,
+   * 값이 짧은 분류값인지까지 못 박는다.
+   */
+  it("보내는 값에 사용자 데이터를 담지 않는다", async () => {
+    const track = vi.spyOn(analytics, "track").mockImplementation(() => {});
+    vi.stubGlobal("navigator", {});
+
+    show();
+    fireEvent.click(await screen.findByRole("button", { name: /이미지 저장|Save image/ }));
+
+    await waitFor(() => expect(track).toHaveBeenCalled());
+    for (const [, params] of track.mock.calls) {
+      for (const v of Object.values(params ?? {})) {
+        expect(typeof v === "string" || typeof v === "boolean").toBe(true);
+        if (typeof v === "string") expect(v.length).toBeLessThan(20);
+      }
+    }
+    track.mockRestore();
   });
 });

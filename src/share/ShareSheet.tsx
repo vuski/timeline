@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useT } from "../i18n";
+import { track } from "../analytics";
 import {
   blockedByInsecureContext, canShareFiles, captureMap, copyLink, downloadImage, intentUrl,
   shareImage, snapshotName, type IntentTarget,
@@ -142,13 +143,23 @@ export default function ShareSheet({ getMap, onClose }: Props) {
    */
   const toApp = async (intent?: IntentTarget) => {
     if (!blob) return;
+    /*
+     * 어느 갈래로 끝났는지까지 센다 — 여는 횟수만으로는 공유가 실제로
+     * 일어났는지 알 수 없다. via 는 네이티브 시트가 얼마나 통하는지를
+     * 보여주고, 그게 이 화면의 설계 전제였다(시트 우선, 인텐트는 대비).
+     */
     const r = await shareImage(blob, document.title);
-    if (r === "shared") return;
+    if (r === "shared") {
+      track("share_to", { app: intent ?? "native", via: "native" });
+      return;
+    }
     if (intent) {
+      track("share_to", { app: intent, via: "intent" });
       window.open(intentUrl(intent, document.title), "_blank", "noreferrer,noopener");
       return;
     }
     // 인스타그램·카카오톡 — 저장해서 앱에서 올리는 수밖에 없다
+    track("share_to", { app: "unknown", via: "save" });
     downloadImage(blob, snapshotName());
     setPhase("saved");
   };
@@ -217,6 +228,7 @@ export default function ShareSheet({ getMap, onClose }: Props) {
                 onClick={async () => {
                   const ok = await copyLink();
                   if (!ok) return;
+                  track("share_to", { app: "link", via: "copy" });
                   setCopied(true);
                   window.setTimeout(() => setCopied(false), 1600);
                 }}
@@ -230,6 +242,7 @@ export default function ShareSheet({ getMap, onClose }: Props) {
               <button
                 className="share-app save"
                 onClick={() => {
+                  track("share_to", { app: "file", via: "save" });
                   downloadImage(blob, snapshotName());
                   setPhase("saved");
                 }}
