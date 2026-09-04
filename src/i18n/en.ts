@@ -17,7 +17,7 @@ export const en: Dict = {
     privacy: "No timeline data ever leaves your device. Check the source on GitHub above.",
     privacyLink: "Privacy",
     privTitle: "Privacy",
-    privLead: "The file you open is read by your browser and stays there. Your location history, coordinates, timestamps, saved images, and recorded videos are never uploaded anywhere. There is no server to receive them. Closing the page discards everything.",
+    privLead: "Timeline.json is read locally, in your browser only. Your location history, coordinates, timestamps, saved images, and recorded videos are never uploaded anywhere. There is no server to receive them. Closing the page discards everything.",
     privVerify:
       "The app is open source, and your browser's network tab shows exactly what it sends.",
     privSharedH: "If you are on a shared computer",
