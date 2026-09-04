@@ -51,12 +51,20 @@ export function initAnalytics(): void {
   document.head.appendChild(s);
 
   window.dataLayer = window.dataLayer || [];
-  const gtag: Gtag = (...args) => {
-    window.dataLayer?.push(args);
-  };
-  window.gtag = gtag;
-  gtag("js", new Date());
-  gtag("config", id);
+  /*
+   * 구글 공식 스니펫은 `function gtag(){dataLayer.push(arguments)}` 다.
+   * arguments 는 배열이 아니라 유사배열({0:…,1:…,length:n})이고, gtag.js 는
+   * 그 모양을 그대로 읽는다. 화살표 함수의 나머지 매개변수로 바꿔 진짜
+   * 배열을 밀어 넣으면 태그가 항목을 알아보지 못해 조용히 버린다 —
+   * 스크립트는 받아오는데 실시간에 아무것도 안 잡히던 원인이었다.
+   */
+  function gtag(): void {
+    // eslint-disable-next-line prefer-rest-params
+    window.dataLayer?.push(arguments);
+  }
+  window.gtag = gtag as unknown as Gtag;
+  window.gtag("js", new Date());
+  window.gtag("config", id);
 }
 
 /**
