@@ -1,0 +1,65 @@
+.mapview {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* 선택 사각형 — 지도 위라 먹색보다 데이터색이 잘 보인다 */
+.mapview-rect {
+  position: absolute;
+  border: 1.5px dashed var(--data-cyan);
+  background: color-mix(in srgb, var(--data-cyan) 12%, transparent);
+  pointer-events: none;
+  border-radius: var(--r-sm);
+}
+
+/*
+ * 선택 모드 — 포인터를 십자선으로 바꿔 "지금 끌면 영역이 그려진다"를 알린다.
+ * maplibre 가 캔버스 컨테이너에 grab/grabbing 커서를 인라인으로 박기 때문에
+ * !important 가 없으면 덮이지 않는다.
+ */
+.mapview[data-selecting="true"] .maplibregl-canvas-container,
+.mapview[data-selecting="true"] .maplibregl-canvas,
+.mapview[data-selecting="true"] canvas {
+  cursor: crosshair !important;
+  /*
+   * 터치에서 사각형을 그리려면 반드시 필요하다.
+   *
+   * 이게 없으면 브라우저가 손가락 움직임을 스크롤·줌으로 보고 도중에
+   * 가로채간다. 그 순간 pointercancel 이 날아오고 드래그가 끊긴다 —
+   * 사각형이 작게 그려다 멈췄던 증상이 이것이다.
+   */
+  touch-action: none !important;
+}
+
+/* 축척 바 — 밝은/어두운 베이스맵 양쪽에서 읽히도록 토큰 색을 쓴다 */
+.mapview .maplibregl-ctrl-scale {
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  border-color: var(--border);
+  color: var(--text);
+  backdrop-filter: blur(6px);
+}
+
+/*
+ * 궤적·체류점 툴팁.
+ *
+ * deck.gl 은 툴팁 요소에 인라인 스타일(검정 배경·흰 글씨·패딩)을 직접
+ * 박아 넣는다. 그래서 !important 없이는 덮이지 않는다.
+ */
+.map-tip {
+  font-family: var(--font) !important;
+  font-size: 12px !important;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4 !important;
+  color: var(--text) !important;
+  background: color-mix(in srgb, var(--surface) 96%, transparent) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--r-md) !important;
+  padding: var(--sp-2) var(--sp-3) !important;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 28%) !important;
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+  white-space: nowrap;
+  transform: translate(8px, 8px);
+  z-index: 5;
+}

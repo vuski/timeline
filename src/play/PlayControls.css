@@ -1,0 +1,207 @@
+/*
+ * 오버레이 토큰을 쓴다 — 시각화 모드에서는 조상의 [data-viz="true"] 가
+ * 같은 이름의 어두운 값을 덮어씌워 이 바 하나만 다크로 뒤집힌다.
+ * 배경을 바깥 껍데기(.ws-play)에 주면 양옆으로 띠가 생기므로 여기서 칠한다.
+ */
+.play {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--overlay-bg);
+  color: var(--overlay-text);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.play-btn {
+  width: var(--tap);
+  min-width: var(--tap);
+  padding: 0;
+  border-radius: var(--r-md);
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+}
+
+/*
+ * 날짜·수치 표시는 폭을 고정한다. min-width 로 두면 "2026. 12. 31." 처럼
+ * 긴 날짜가 올 때 칸이 늘어나 재생 바 전체가 들썩인다.
+ * tabular-nums 로 숫자 폭까지 고르게 맞춘다.
+ */
+/* 모드 이름 — 아이콘만으로는 3상태가 구분되지 않는다 */
+.play-modelabel {
+  flex: 0 0 64px;
+  width: 64px;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--overlay-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 자동 재생 중임을 버튼 색으로 알린다 */
+.play-btn.play-mode-auto {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: transparent;
+}
+
+/* 수동 모드는 스크러버가 주역 — 눈에 띄게 한다 */
+.play-scrub-active {
+  accent-color: var(--accent-warm);
+}
+
+.play-date {
+  font-size: var(--fs-md);
+  color: var(--overlay-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 0 0 104px;
+  width: 104px;
+  text-align: center;
+}
+
+.play-scrub {
+  flex: 1 1 160px;
+  min-width: 120px;
+  accent-color: var(--accent);
+}
+
+.play-field {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--overlay-dim);
+  font-size: var(--fs-md);
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.play-field input {
+  width: 96px;
+  accent-color: var(--accent);
+}
+
+.play-field output {
+  flex: 0 0 auto;
+  width: 72px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+  color: var(--overlay-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 모바일에서는 좁으니 슬라이더 두 개를 줄인다 — 재생·스크러버가 우선 */
+/*
+ * 묶음은 모바일 전용이다 — 데스크톱에서는 없는 것처럼 두어
+ * 두 필드가 재생 바에 그대로 흘러가게 한다.
+ *
+ * 반드시 미디어 쿼리 앞에 있어야 한다. 뒤에 두면 같은 명세도에서
+ * 나중 규칙이 이겨, 모바일에서도 display:contents 가 이겼다 — 묶음이
+ * 사라져 두 필드가 각각 줄바꿈하는 버그가 나왔다.
+ */
+.play-fields {
+  display: contents;
+}
+
+@media (max-width: 768px) {
+  .play-modelabel { display: none; }
+  .play-date { flex-basis: 92px; width: 92px; }
+
+  /*
+   * 속도와 꼬리 길이를 무조건 한 줄에 — 폭을 4:6 으로 나눈다.
+   *
+   * 꼬리 쪽이 더 넓은 건 표시값이 길기 때문이다("7개월 10일" vs "1.0x").
+   *
+   * 이전에는 좀다고 이름을 숨겼는데(span{display:none}), 그러면 슬라이더
+   * 두 개가 무슨 차이인지 알 길이 없다. 이름을 되살리고 숫자칸을 줄였다.
+   */
+  .play-fields {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: var(--sp-2);
+    width: 100%;
+  }
+
+  .play-fields .play-field:first-child { flex: 4 1 0; }
+  .play-fields .play-field:last-child { flex: 6 1 0; }
+
+  .play-field {
+    min-width: 0;
+    gap: var(--sp-1);
+  }
+
+  /* 이름은 다시 보이게 — 단, 줄바꿈 없이 짧게 */
+  .play-field span {
+    display: inline;
+    flex: none;
+    font-size: var(--fs-xs);
+    white-space: nowrap;
+  }
+
+  /* 슬라이더가 남는 폭을 먹는다 */
+  .play-field input {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+  }
+
+  .play-trail { min-width: 0; }
+
+  .play-field output {
+    flex: none;
+    width: auto;
+    min-width: 0;
+    font-size: var(--fs-xs);
+  }
+}
+
+/* 꼬리 슬라이더는 넓게 — 하루~수년을 로그 축으로 담는다 */
+.play-trail {
+  min-width: 180px;
+  flex: 1;
+}
+
+/*
+ * 시각화 모드 — 어두운 바 위의 컨트롤.
+ *
+ * accent 는 먹색(#18181b)이라 어두운 바탕에서 사라진다. 슬라이더 손잡이와
+ * 버튼은 밝은 쪽으로 뒤집어야 보인다.
+ */
+[data-viz="true"] .play-btn {
+  background: rgb(255 255 255 / 0.08);
+  color: var(--overlay-text);
+  border-color: var(--overlay-border);
+}
+
+@media (hover: hover) {
+  [data-viz="true"] .play-btn:hover:not(:disabled) {
+    background: rgb(255 255 255 / 0.16);
+  }
+}
+
+/* 자동 재생 중 — 반전해서 확실히 켜진 티를 낸다 */
+[data-viz="true"] .play-btn.play-mode-auto {
+  background: var(--overlay-text);
+  color: #18181b;
+  border-color: var(--overlay-text);
+}
+
+[data-viz="true"] .play-scrub,
+[data-viz="true"] .play-field input {
+  accent-color: #fafafa;
+}
+
+[data-viz="true"] .play-scrub-active {
+  accent-color: var(--accent-warm);
+}

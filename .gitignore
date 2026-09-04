@@ -1,0 +1,11 @@
+material/타임라인.json
+node_modules/
+dist/
+tsconfig.tsbuildinfo
+.superpowers/
+CLAUDE.md
+# 로컬 전용 — 측정 ID 등. 배포 값은 GitHub Secrets 에서 온다
+.env
+.env.local
+.readme/
+docs/

@@ -1,0 +1,58 @@
+# GitHub Pages 배포 — 빌드 때 측정 ID 를 시크릿에서 주입한다.
+#
+# 소스에 ID 를 박지 않으려는 것이 목적이다. 다만 GA 측정 ID 는 원래
+# 브라우저가 읽어야 동작하므로, 빌드 결과물(dist)과 네트워크 요청에는
+# 반드시 드러난다 — 소스 저장소에 안 남길 뿐 비밀이 되지는 않는다.
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 배포는 한 번에 하나만. 진행 중인 것을 취소하지는 않는다 — 반쯤 올라간
+# 상태로 남기지 않기 위해서다.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # 배포 전에 막는다 — 깨진 것을 올리지 않는다
+      - run: npx tsc --noEmit
+      - run: npx vitest run
+
+      - run: npm run build
+        env:
+          # 시크릿이 없으면 빈 값이 되고, 그때는 앱이 gtag 를 아예 안 붙인다
+          VITE_GA_ID: ${{ secrets.VITE_GA_ID }}
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

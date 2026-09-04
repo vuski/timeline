@@ -1,0 +1,156 @@
+/*
+ * 폰트는 번들에 담는다 — CDN 링크는 페이지를 열 때마다 외부 요청을 보낸다.
+ * 이 앱은 위치 데이터가 브라우저 밖으로 나가지 않는 것이 신뢰 근거라(설계
+ * §2), 폰트 하나 때문에 네트워크를 켜지 않는다.
+ *
+ * dynamic-subset 은 한글을 92 조각으로 나눠 두어, 화면에 실제로 쓰인 글자가
+ * 든 조각(약 33KB)만 내려받는다.
+ */
+@import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
+@import "./tokens.css";
+
+* { box-sizing: border-box; }
+
+/*
+ * 당기기-새로고침 차단.
+ *
+ * overscroll-behavior 를 body 에만 주면 소용이 없다 — 그 제스처를
+ * 판단하는 건 스크롤 루트인 html 이다. 둘 다 주고 문서 자체가
+ * 움직이지 않게 고정한다. 지도를 드래그하다 손가락이 아래로 샐을 때
+ * 페이지가 통째로 내려가 새로고침되는 일을 막는다.
+ */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  overscroll-behavior: none;
+}
+
+html, body {
+  /* 앱이 화면을 꽉 채우므로 문서 스크롤 자체가 필요 없다 */
+  overflow: hidden;
+  position: fixed;
+  inset: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: var(--fs-md);
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * 버튼 — 얇은 테두리에 흰 바탕, 낮은 높이.
+ *
+ * 참조 프로젝트의 밀도를 따른다: 높이 28px, 좌우 여백 8px, 12px 글자.
+ * 두꺼운 패딩 대신 테두리로 경계를 만들고, 눌린 상태는 색을 칠하는 대신
+ * **반전**시킨다(짙은 바탕 + 흰 글자). 지도 위의 큰 버튼만 --tap 을 쓴다.
+ */
+button {
+  font: inherit;
+  font-size: var(--fs-md);
+  color: var(--text);
+  cursor: pointer;
+  min-height: var(--h-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--r-md);
+  padding: 0 var(--sp-3);
+  transition: background var(--t-fast), border-color var(--t-fast),
+    color var(--t-fast);
+}
+
+@media (hover: hover) {
+  button:hover:not(:disabled) { background: var(--accent-soft); }
+}
+button:disabled { opacity: 0.4; cursor: default; }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* 눌린 상태의 공통 언어 — 칩·토글이 모두 이 모양을 쓴다 */
+.chip.on,
+button[aria-pressed="true"],
+button[aria-checked="true"] {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: var(--accent);
+}
+
+@media (hover: hover) {
+  .chip.on:hover:not(:disabled),
+  button[aria-pressed="true"]:hover:not(:disabled),
+  button[aria-checked="true"]:hover:not(:disabled) {
+    background: #27272a;
+  }
+}
+
+input[type="date"],
+input[type="text"],
+input[type="number"],
+select {
+  font: inherit;
+  font-size: var(--fs-md);
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 0 var(--sp-2);
+  min-height: var(--h-md);
+}
+
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* 범위 슬라이더는 강조색이 아니라 먹색 — 데이터 색과 섞이지 않게 */
+input[type="range"] { accent-color: var(--accent); }
+
+h1, h2, h3 { font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+  }
+}
+
+/*
+ * 스크롤바 — 트랙은 배경에 녹이고 손잡이만 옅은 회색으로 띄운다.
+ * 표준 속성(파이어폭스)과 WebKit 의사요소를 함께 준다.
+ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  /* 트랙과 손잡이 사이를 배경색 테두리로 벌려 가늘어 보이게 한다 */
+  border: 2px solid transparent;
+  background-clip: content-box;
+  border-radius: var(--r-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-dim);
+  background-clip: content-box;
+}
+
+/* 모서리(가로·세로가 만나는 칸)도 배경에 맞춘다 */
+::-webkit-scrollbar-corner {
+  background: transparent;
+}

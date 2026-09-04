@@ -1,0 +1,255 @@
+.tracklist {
+  flex: 1;
+  min-height: 160px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  /* 모서리를 둥글리면 그 곡선이 날짜 구분선 끝을 깎아 휘어 보인다.
+     구분선이 끝까지 곧게 가도록 각지게 둔다. */
+  border-radius: 0;
+}
+
+/* 전체 높이만 만들고 실제 행은 그 안에서 창 단위로 옮겨 그린다 */
+.tracklist-space {
+  position: relative;
+}
+
+.tracklist-win {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  will-change: transform;
+}
+
+.tracklist-empty {
+  margin: 0;
+  padding: var(--sp-4);
+  font-size: var(--fs-md);
+  color: var(--text-dim);
+  text-align: center;
+}
+
+/* ── 날짜 헤더 — 누르면 펼쳐지며 그 날 전체가 선택된다 ── */
+.tracklist-day {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: auto;
+  /* 왼쪽 여백은 표시 막대(3px) + 간격만큼 */
+  padding: 0 var(--sp-2) 0 var(--sp-3);
+  background: var(--surface);
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-size: var(--fs-md);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  text-align: start;
+  cursor: pointer;
+}
+
+/*
+ * 날짜 행임을 알리는 검은 막대.
+ *
+ * 아래를 1px 띄운다 — 막대가 구분선까지 닿으면 둘이 붙어 ㄴ 자로 보인다.
+ */
+.tracklist-day::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 1px;
+  width: 3px;
+  background: var(--accent);
+}
+
+@media (hover: hover) {
+  .tracklist-day:hover {
+    background: var(--accent-soft);
+  }
+}
+
+.caret {
+  display: inline-block;
+  flex: none;
+  color: var(--text-dim);
+  transition: transform 0.12s ease;
+}
+
+.caret.on {
+  transform: rotate(90deg);
+}
+
+.tracklist-date {
+  flex: 1;
+}
+
+.tracklist-count {
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+}
+
+/* ── 항목 행 ── */
+.tracklist-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: auto;
+  /* 들여쓰기를 줄여 한 줄에 다 들어가게 한다 — 날짜 헤더와의 위계는
+     아이콘 들여쓰기 정도로 충분하다 */
+  padding: 0 var(--sp-2) 0 var(--sp-3);
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums;
+  text-align: start;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .tracklist-item:hover {
+    background: var(--accent-soft);
+  }
+}
+
+/* 선택 행 — 먹색 반전은 목록 전체에 쓰면 과하다. 짙은 회색 면으로만 */
+.tracklist-item.on {
+  background: #d4d4d8;
+  font-weight: 500;
+}
+
+@media (hover: hover) {
+  .tracklist-item.on:hover {
+    background: #c8c8cd;
+  }
+}
+
+/* 체류는 점, 이동은 굵은 선 — 지도의 점·궤적과 같은 모양이다 */
+.tracklist-dot {
+  flex: none;
+  width: 10px;
+  display: flex;
+  justify-content: center;
+}
+
+.tracklist-dot::before {
+  content: "";
+  display: block;
+}
+
+/* 지도의 체류점·궤적 색과 맞춘다 */
+.tracklist-dot.visit::before {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--r-full);
+  background: #476bbf;
+}
+
+.tracklist-dot.track::before {
+  width: 10px;
+  height: 3px;
+  border-radius: 1px;
+  background: rgb(120 160 200);
+}
+
+.tracklist-time {
+  flex: none;
+  color: var(--text);
+}
+
+/* 줄바꿈 금지 — "체류" 가 두 줄로 쪼개지면 행 높이가 어긋난다 */
+.tracklist-kind {
+  flex: none;
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+
+/* 목록 위 도구 줄 — 제목 옆에 정렬 토글이 붙는다 */
+.tracklist-bar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin: 0 0 var(--sp-2);
+  min-height: var(--h-md);
+}
+
+.tracklist-sort {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-height: auto;
+  padding: 3px var(--sp-2);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .tracklist-sort:hover {
+    color: var(--text);
+    border-color: var(--accent);
+  }
+}
+
+.tracklist-title {
+  flex: 1;
+  margin: 0;
+}
+
+/* 체류 시간 — 시각과 같은 고정폭 숫자로 세로줄을 맞춘다 */
+.tracklist-dur {
+  margin-inline-start: auto;
+  flex: none;
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+}
+
+/* 기준 시간대 선택 — 바꾸면 날짜 묶기까지 다시 계산된다 */
+.tracklist-tz {
+  flex: none;
+  min-height: auto;
+  padding: 3px var(--sp-1);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .tracklist-tz:hover {
+    color: var(--text);
+    border-color: var(--accent);
+  }
+}
+
+/* 현지 시각 — 기준과 다른 행에만 붙는다 */
+/* 현지 시각 — 왼쪽 정렬(종류 바로 뒤). 남는 폭은 소요시간 앞이 먹는다 */
+.tracklist-local {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  font-size: var(--fs-xs);
+  /* 지도의 체류점·격자와 같은 파랑 — 색을 하나로 모은다 */
+  color: #476bbf;
+  white-space: nowrap;
+}
+
+.tracklist-tzmark {
+  opacity: 0.75;
+}
+
+

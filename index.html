@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+    <title>타임라인 시각화</title>
+    <meta
+      name="description"
+      content="휴대폰에 쌓인 내 타임라인 기록을 지도 위에 펼쳐 봅니다. 이동 궤적과 머문 곳을 날짜별로 살펴보고, 재생하거나 영상으로 남길 수 있습니다. 어떠한 데이터도 서버로 전송되지 않습니다."
+    />
+    <meta
+      name="keywords"
+      content="타임라인, 구글 타임라인, 위치 기록, 이동 경로, 이동 궤적, 방문 기록, 지도 시각화, 데이터 시각화, 개인 위치 데이터, 브라우저에서 처리, MapLibre, deck.gl"
+    />
+    <meta name="author" content="VWL Inc." />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://timeline.vw-lab.com/" />
+
+    <!-- 아이콘 — SVG 를 먼저 두고, 지원하지 않는 브라우저가 .ico 로 내려간다 -->
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- 공유 카드. og:image 는 상대경로가 통하지 않아 절대 URL 로 둔다 -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://timeline.vw-lab.com/" />
+    <meta property="og:site_name" content="Timeline Explorer" />
+    <meta property="og:title" content="타임라인 시각화" />
+    <meta
+      property="og:description"
+      content="휴대폰에 쌓인 내 타임라인 기록을 지도 위에 펼쳐 봅니다. 어떠한 데이터도 서버로 전송되지 않습니다."
+    />
+    <meta property="og:locale" content="ko_KR" />
+    <meta property="og:image" content="https://timeline.vw-lab.com/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="타임라인 시각화: 지도 위에 그려진 이동 궤적" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="타임라인 시각화" />
+    <meta
+      name="twitter:description"
+      content="휴대폰에 쌓인 내 타임라인 기록을 지도 위에 펼쳐 봅니다. 어떠한 데이터도 서버로 전송되지 않습니다."
+    />
+    <meta name="twitter:image" content="https://timeline.vw-lab.com/og.png" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "타임라인 시각화",
+        "alternateName": "Timeline Explorer",
+        "url": "https://timeline.vw-lab.com",
+        "description": "휴대폰에 쌓인 내 타임라인 기록을 지도 위에 펼쳐 봅니다. 이동 궤적과 머문 곳을 날짜별로 살펴보고, 재생하거나 영상으로 남길 수 있습니다. 어떠한 데이터도 서버로 전송되지 않습니다.",
+        "applicationCategory": "DataVisualizationApplication",
+        "operatingSystem": "Web Browser",
+        "inLanguage": ["ko", "en"],
+        "author": {
+          "@type": "Organization",
+          "name": "VWL Inc.",
+          "url": "https://www.vw-lab.com"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "KRW"
+        },
+        "keywords": "타임라인, 위치 기록, 이동 경로, 방문 기록, 지도 시각화, 데이터 시각화"
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

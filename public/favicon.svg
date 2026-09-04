@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!--
+    이동선 파비콘 — 앱의 실제 색을 그대로 쓴다.
+    궤적 #78a0c8 / 체류점 #476bbf / 현재 위치 #fcba03 (선택색)
+
+    16px 로 줄어도 읽히도록 점은 3개만, 선은 굵게(3.2) 잡았다.
+    round cap/join — 지도 궤적과 같은 인상.
+  -->
+  <path d="M6 24 L13 14 L21 19 L26 8"
+        fill="none" stroke="#78a0c8" stroke-width="3.2"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="6"  cy="24" r="3.4" fill="#476bbf"/>
+  <circle cx="13" cy="14" r="3"   fill="#476bbf"/>
+  <circle cx="21" cy="19" r="3"   fill="#476bbf"/>
+  <!-- 끝점 = 현재 위치. 흰 테두리로 선 위에서 떠 보이게 -->
+  <circle cx="26" cy="8" r="4" fill="#fcba03" stroke="#fff" stroke-width="1.6"/>
+</svg>

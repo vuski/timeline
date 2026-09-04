@@ -1,0 +1,164 @@
+.share {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 0.6);
+  padding: var(--sp-4);
+}
+
+.share-body {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  /* 지도 그림이 주인공이다 — 화면을 넓게 쓴다 */
+  width: min(720px, 100%);
+  max-width: 100%;
+  /*
+   * 휴대폰 내비게이션 바를 침범하지 않게 30px 만큼 비컴다.
+   * dvh 를 쓰면 주소표시줄이 접힐 때의 실제 높이를 따른다 —
+   * 지원하지 않는 브라우저는 앞줄(vh)로 떨어진다.
+   */
+  height: calc(94vh - 30px);
+  height: calc(94dvh - 30px);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+/*
+ * 미리보기 — 아래 위젯들을 다 놓고 남는 높이를 전부 가져간다.
+ *
+ * vh 로 고정하면 문구 입력칸·버튼이 차지하는 높이를 몰라 그림이
+ * 필요 이상으로 작아진다. flex 가 실제 남은 공간을 재게 둔다.
+ *
+ * 저장되는 실제 이미지는 원래 크기 그대로다 — 여기서 줄이는 건
+ * 보여 주는 크기뿐이다.
+ */
+.share-preview {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  object-fit: contain;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+}
+
+/* 그림 외의 것들은 내용만큼만 — 남는 공간은 그림이 먹는다 */
+.share-body > *:not(.share-preview) {
+  flex: none;
+}
+
+/*
+ * 공유처 격자 — 아이콘 + 이름을 한 칸씩.
+ *
+ * 밑줄 친 링크 나열보다 알아보기 쉽고, 손가락으로 누를 면적도 나온다.
+ */
+/* 공유처 — 아이콘 + 이름을 가로로 담은 작은 칩을 흘린다 */
+.share-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.share-app {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-height: var(--h-md);
+  padding: 0 var(--sp-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .share-app:hover {
+    background: var(--accent-soft);
+    color: var(--text);
+    text-decoration: none;
+  }
+}
+
+/* 아이콘은 각 서비스 색으로 — 글자보다 아이콘을 먼저 찾게 된다 */
+.share-app-icon {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+}
+
+/* 아이콘 SVG 도 칩 크기에 맞춰 줄인다 */
+.share-app-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.share-app.x .share-app-icon { color: #000; }
+.share-app.fb .share-app-icon { color: #1877f2; }
+.share-app.line .share-app-icon { color: #06c755; }
+.share-app.kakao .share-app-icon { color: #3c1e1e; }
+.share-app.insta .share-app-icon { color: #d62976; }
+.share-app.copy .share-app-icon { color: var(--text-dim); }
+
+/*
+ * 이미지 저장 — 데스크톱에서는 이게 주된 길이다(웹 인텐트로는
+ * 이미지를 못 보낸다). 파란 테두리로 구분해 둔다.
+ */
+.share-app.save {
+  border-color: #476bbf;
+  border-width: 2px;
+}
+
+.share-app.save .share-app-icon { color: #476bbf; }
+
+
+
+/* 네이티브 공유 — 이미지까지 그대로 넘기므로 모바일에서는 이게 1차 동선이다 */
+.share-primary {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: transparent;
+  font-weight: 600;
+}
+
+@media (hover: hover) {
+  .share-primary:hover:not(:disabled) { background: #27272a; }
+}
+
+.share-hint {
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  margin: 0;
+}
+
+.share-ok {
+  color: var(--text);
+  font-size: var(--fs-sm);
+  margin: 0;
+}
+
+/* 이미지에 새길 문구 — 미리보기 바로 아래 */
+.share-caption {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+
+/* 입력칸 — 이 창에서 손으로 적는 유일한 곳이라 파란 테두리로 알린다 */
+.share-caption input {
+  width: 100%;
+  border-color: #476bbf;
+  border-width: 2px;
+}

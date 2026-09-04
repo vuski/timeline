@@ -1,0 +1,511 @@
+.ws {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  height: 100%;
+}
+
+.ws-map {
+  position: relative;
+  grid-column: 2;
+  min-height: 0;
+}
+
+.ws-panel {
+  grid-column: 1;
+  grid-row: 1;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/*
+ * 본문 — 여기만 스크롤한다. 밑의 버튼 줄은 밖에 있어 항상 보인다.
+ */
+.ws-panel-scroll {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* 맨 아래 고정 줄 — 데스크톱·모바일 모두 같다 */
+.ws-panel-foot {
+  display: flex;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  flex: none;
+}
+
+.ws-panel-foot button { font-size: var(--fs-md); }
+
+/*
+ * 손잡이 — 모바일 전용. 데스크톱에서는 숨긴다(아래 미디어 쿼리).
+ */
+.ws-grip {
+  display: none;
+}
+
+/*
+ * 다른 파일 열기 — 이 패널의 주역이다. 남는 폭을 다 먹고,
+ * 테두리를 한 단계 진한 회색으로 두어 눈에 먼저 들어오게 한다.
+ */
+.ws-panel-open {
+  flex: 1;
+  padding: 0 var(--sp-3);
+  /* border-strong(#d4d4d8)은 기본 테두리와 거의 구분이 안 간다.
+     한 단계 더 내려 진한 회색으로 둔다. */
+  border-color: var(--text-dim);
+}
+
+@media (hover: hover) {
+  .ws-panel-open:hover:not(:disabled) {
+    border-color: var(--text);
+  }
+}
+
+/* 언어 — 글자 둘만 들어가는 정사각형 */
+.ws-panel-lang {
+  flex: 0 0 var(--h-md);
+  width: var(--h-md);
+  padding: 0;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/*
+ * 요약 한 줄 — 체류·궁적 수 + 정점 수 + 무게 등급.
+ * 동시에 그 아래 설정을 접고 펴는 버튼이라 버튼 기본 꼴을 벗긴다.
+ */
+.ws-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  padding: var(--sp-2) var(--sp-4);
+  margin: var(--sp-1) 0 0;
+  color: var(--text-dim);
+  font-size: var(--fs-md);
+  text-align: start;
+  background: none;
+  border: none;
+  border-radius: 0;
+  min-height: auto;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .ws-summary:hover:not(:disabled) {
+    background: var(--accent-soft);
+  }
+}
+
+/* 펼침 표시 — 목록의 날짜 헤더와 같은 모양을 쓴다 */
+.ws-summary .caret {
+  flex: none;
+  color: var(--text-dim);
+}
+
+/* 정점 수는 남는 폭을 먹어 등급 배지를 오른쪽 끝으로 밀어낸다 */
+.ws-summary-verts {
+  margin-inline-start: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * 모드 배지 겸 전환 버튼 — 화면 가운데 위.
+ *
+ * 테두리 색이 현재 모드를 말한다: 편집은 점 색과 같은 남색, 시각화는
+ * 노랑(선택 강조색과 같은 색). 글자는 주변 컨트롤보다 한 단계 크다.
+ */
+.ws-mode {
+  position: absolute;
+  top: var(--sp-4);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-map-ui);
+  /* 기본 패딩에 2px 씩 더 준다 */
+  padding: calc(var(--sp-1) + 2px) calc(var(--sp-3) + 2px);
+  min-height: auto;
+  border-radius: var(--r-md);
+  background: var(--overlay-bg);
+  backdrop-filter: blur(8px);
+  border: 2px solid #476bbf;
+  color: var(--overlay-text);
+  /* 주변 12px 대비 1.3배 */
+  font-size: calc(var(--fs-md) * 1.3);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .ws-mode:hover {
+    background: var(--overlay-bg);
+    filter: brightness(0.97);
+  }
+}
+
+/* 시각화 모드 — 어두운 지도 위라 오버레이 색을 반전하고 테두리는 노랑 */
+.ws-mode[data-viz="true"] {
+  --overlay-bg: rgb(24 24 27 / 0.92);
+  --overlay-text: #fafafa;
+  border-color: #fcba03;
+}
+
+/* 반전 활성 규칙(aria-pressed)이 이 버튼까지 먹지 않게 한다 */
+.ws-mode[aria-pressed="true"] {
+  background: var(--overlay-bg);
+  color: var(--overlay-text);
+}
+
+/* 선택 바가 같은 자리에 뜨면 배지를 위로 비켜준다 */
+.ws-map:has(.selectbar) .ws-mode {
+  top: calc(var(--sp-4) + 56px);
+}
+
+.ws-tools {
+  position: absolute;
+  top: var(--sp-4);
+  right: var(--sp-4);
+  z-index: var(--z-map-ui);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+/*
+ * 특별한 기능임을 테두리 색으로 알린다 — 지도의 칸·점과 같은 파랑.
+ * 아이콘까지 같은 색이면 버튼 전체가 떠버리므로 테두리만 칠한다.
+ */
+.ws-tool-accent {
+  border-color: #476bbf;
+  /* 다른 버튼(1px)보다 한 단계 굵게 — 색만으로는 약하다 */
+  border-width: 2px;
+}
+
+/*
+ * 영상 저장 — 시각화 모드 전용이라 그 모드의 색(모드 배지 테두리와 같은
+ * 노랑)을 쓴다. 어두운 지도 위에서도 잘 보이는 색이다.
+ */
+.ws-tool-warm {
+  border-color: #fcba03;
+  border-width: 2px;
+}
+
+/* 누른 상태는 먹색 반전이 공통 언어다 — 그때는 테두리도 같이 간다 */
+.ws-tool.on {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: transparent;
+  font-weight: 600;
+}
+
+/*
+ * z축 세로 슬라이더 — 화면 왼쪽.
+ *
+ * 오른쪽은 도구 버튼이 세로로 쌓여 내려오므로 둘이 맞붙는다.
+ * 왼쪽은 지도 기본 위젯(나침반·확대축소)이 상단에만 있어 가운데가 비어 있다.
+ */
+.ws-zaxis {
+  position: absolute;
+  left: var(--sp-4);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: var(--z-map-ui);
+}
+
+.selectbar {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: var(--sp-4);
+  z-index: var(--z-map-ui);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: calc(100% - var(--sp-4));
+  padding: var(--sp-2) var(--sp-3);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow);
+}
+
+.selectbar-modes,
+.selectbar-actions {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.selectbar-count {
+  color: var(--text-dim);
+  font-size: var(--fs-md);
+  white-space: nowrap;
+}
+
+/* 나가기 — 아이콘만 들어가는 정사각형 */
+.selectbar-exit {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--h-md);
+  min-width: var(--h-md);
+  padding: 0;
+}
+
+.chip {
+  min-height: var(--h-md);
+  padding: 0 var(--sp-3);
+  border-radius: var(--r-full);
+  font-size: var(--fs-md);
+}
+
+.chip.on {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: transparent;
+}
+
+.ws-play {
+  position: absolute;
+  left: var(--sp-4);
+  right: var(--sp-4);
+  bottom: var(--sp-4);
+  z-index: var(--z-map-ui);
+  display: flex;
+  justify-content: center;
+}
+
+/* 모바일 — 지도가 전면, 패널은 손으로 접는 하단 시트 */
+@media (max-width: 768px) {
+  .ws {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto;
+  }
+  .ws-map { grid-column: 1; grid-row: 1; }
+  .ws-panel {
+    grid-column: 1;
+    grid-row: 2;
+    border-right: none;
+    border-top: 1px solid var(--border);
+    /* 기본 높이 — 손잡이를 끌면 인라인 height 가 이걸 덮는다 */
+    max-height: 45vh;
+    border-radius: var(--r-lg) var(--r-lg) 0 0;
+    transition: height var(--t-med), max-height var(--t-med);
+  }
+
+  /*
+   * 스크롤을 하나로 — 바깥 통을 고정하고 목록만 움직이게 한다.
+   *
+   * 목록은 가상 스크롤이라 자기 스크롤 박스가 반드시 있어야 한다
+   * (scrollTop 으로 그릴 구간을 정한다). 그래서 반대로 풀었다 —
+   * 바깥 통을 넘치지 않게 맞춰 두면 손가락이 닿는 스크롤은 목록 하나다.
+   */
+  .ws-panel-scroll {
+    overflow: hidden;
+  }
+
+  .ws-list {
+    flex: 1;
+    min-height: 0;
+  }
+
+  /*
+   * 끌리는 동안은 애니메이션을 끔다 — 전환이 걸리면 손가락보다
+   * 늦게 따라와 끈적인다. 떼는 순간부터 다시 부드럽게 스냅한다.
+   */
+  .ws-panel[data-dragging="true"] {
+    transition: none;
+  }
+
+  /* 접은 상태 — 본문을 닫아 손잡이와 버튼 줄만 남긴다 */
+  .ws-panel[data-shut="true"] .ws-panel-scroll {
+    display: none;
+  }
+
+  /*
+   * 선택 바 — 좌우 여백을 줄여 가로를 최대한 쓴다.
+   * 글자를 줄이고(반전·남기기·삭제) 나가기를 아이콘으로 바꿔
+   * 한 줄에 들어가게 했다.
+   */
+  /*
+   * 선택 바 — 한 줄로. 좌우 여백을 줄여 가로를 거의 다 쓴다.
+   *
+   * 글자를 줄이고(반전·남기기·삭제) 나가기를 아이콘으로 바꿔
+   * 한 줄에 들어간다.
+   */
+  .selectbar {
+    left: var(--sp-2);
+    right: var(--sp-2);
+    transform: none;
+    max-width: none;
+    gap: var(--sp-2);
+    padding: var(--sp-2);
+    justify-content: space-between;
+    flex-wrap: nowrap;
+    /*
+     * 도구 아이콘 위로 올라온다 — 선택 중에는 그쪽을 쓸 일이 없고,
+     * 같은 z-index 면 DOM 순서로 아이콘이 이긴다.
+     */
+    z-index: calc(var(--z-map-ui) + 1);
+  }
+
+  .selectbar .chip {
+    padding: 0 var(--sp-2);
+  }
+
+  .selectbar-modes,
+  .selectbar-actions {
+    flex-wrap: nowrap;
+  }
+
+  .selectbar-actions button {
+    padding: 0 var(--sp-2);
+  }
+
+  /* 개수 안내는 줄어들 수 있게 — 버튼이 우선이다 */
+  .selectbar-count {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* 손잡이 — 시트 맨 위, 손가락으로 잡기 좋게 넓게 */
+  .ws-grip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 100%;
+    min-height: var(--h-lg);
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: var(--r-lg) var(--r-lg) 0 0;
+    /* 수직 드래그를 직접 받는다 — 브라우저 스크롤로 샐지 않게 */
+    touch-action: none;
+    cursor: grab;
+  }
+
+  .ws-grip:active { cursor: grabbing; }
+
+  .ws-grip-bar {
+    width: 36px;
+    height: 4px;
+    border-radius: var(--r-full);
+    background: var(--border-strong);
+  }
+}
+
+/* 목록 — 패널 아래쪽을 채운다 */
+.ws-list {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  /* 위 여백은 설정이 접혔을 때 요약 줄과 붙지 않게 — 펼쳤을 때는
+     위의 섹션이 이미 간격을 만들어 둔다 */
+  padding: var(--sp-2) var(--sp-4) var(--sp-4);
+}
+
+/* 라벨을 다 못 찍었을 때의 안내 — 지도 위에 작게 */
+.ws-labelnote {
+  position: absolute;
+  left: 50%;
+  /* 지도 기본 위젯(축척 막대)이 바닥에 깔려 있다 — 그만큼 비켜 준다 */
+  bottom: calc(var(--sp-4) + 20px);
+  transform: translateX(-50%);
+  margin: 0;
+  padding: var(--sp-1) var(--sp-3);
+  font-size: var(--fs-md);
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--r-full);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/*
+ * 시각화 모드의 지도 위 컨트롤 — 어두운 지도 위에 얹히므로 반전한다.
+ *
+ * UI 전체는 밝게 두되(사용자 지정) 지도에 겹치는 것만 어두운 면에 맞춘다.
+ * 밝은 버튼을 어두운 지도 위에 두면 눈이 부시고 궤적을 가린다.
+ */
+/*
+ * 칠하는 대상은 **패널 자체**여야 한다. .ws-play·.ws-zaxis 는 위치만
+ * 잡는 껍데기라(가로 전체를 차지하고 안에서 가운데 정렬) 여기에 배경을
+ * 주면 재생 바 양옆으로 검은 띠가 뻗는다.
+ */
+.ws-map[data-viz="true"] .ws-tools button {
+  background: var(--overlay-bg);
+  color: var(--overlay-text);
+  border-color: var(--overlay-border);
+  backdrop-filter: blur(8px);
+}
+
+/*
+ * 강조 테두리는 시각화 모드에서도 살려 둔다.
+ *
+ * 위 규칙이 더 구체적이라 그대로 두면 노랑·파랑이 회색으로 덮인다.
+ */
+.ws-map[data-viz="true"] .ws-tools .ws-tool-warm {
+  border-color: #fcba03;
+}
+
+.ws-map[data-viz="true"] .ws-tools .ws-tool-accent {
+  border-color: #476bbf;
+}
+
+@media (hover: hover) {
+  .ws-map[data-viz="true"] .ws-tools button:hover:not(:disabled) {
+    background: rgb(39 39 42 / 0.95);
+  }
+}
+
+.ws-map[data-viz="true"] .ws-tools button[aria-pressed="true"] {
+  background: var(--overlay-text);
+  color: #18181b;
+  border-color: var(--overlay-text);
+}
+
+/* 녹화 버튼의 예상 길이 — 라벨 옆에 작게 */
+.ws-tool-note {
+  margin-inline-start: var(--sp-2);
+  font-size: var(--fs-xs);
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 도구 버튼 — 아이콘 + 라벨을 한 줄로 */
+.ws-tool {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  justify-content: flex-start;
+}
+
+/* 자리는 지키고 보이지만 않게 — 아이콘이 밀리면 위치를 다시 찾아야 한다 */
+.ws-tool[data-hidden="true"] {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.ws-zaxis[data-hidden="true"] {
+  visibility: hidden;
+  pointer-events: none;
+}

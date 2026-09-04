@@ -1,0 +1,130 @@
+.rec {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 0.6);
+  padding: var(--sp-4);
+}
+
+.rec-body {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  width: min(440px, 100%);
+  box-shadow: var(--shadow);
+}
+
+.rec-title {
+  margin: 0;
+  font-size: var(--fs-lg);
+}
+
+/*
+ * 미리보기 — 어두운 지도를 대신하는 검은 바탕에 실제 배치대로 쌓는다.
+ * 비율까지 맞추지는 않는다. 무엇이 어디에 들어가는지만 알면 된다.
+ */
+.rec-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--sp-3);
+  min-height: 132px;
+  background: #18181b;
+  border-radius: var(--r-md);
+  color: #fff;
+  text-align: center;
+  overflow: hidden;
+}
+
+.rec-preview-title { font-size: 15px; font-weight: 700; }
+.rec-preview-repo { font-size: 10px; font-weight: 400; opacity: 0.85; }
+/* 날짜 + 문구 — 남는 공간을 밀어내 한 덩어리로 바닥에 붙인다 */
+.rec-preview-foot {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+}
+
+.rec-preview-date {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.rec-preview-cap {
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.rec-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  font-size: var(--fs-md);
+  color: var(--text-dim);
+}
+
+.rec-field input { width: 100%; }
+
+.rec-count {
+  align-self: flex-end;
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.rec-check {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-md);
+  cursor: pointer;
+}
+
+.rec-check input {
+  min-height: auto;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.rec-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+  margin-top: var(--sp-1);
+}
+
+.rec-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: transparent;
+  font-weight: 600;
+}
+
+@media (hover: hover) {
+  .rec-primary:hover:not(:disabled) { background: #27272a; }
+}
+
+/* 예상 길이 — 라벨 옆에 작게 */
+.rec-est {
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}

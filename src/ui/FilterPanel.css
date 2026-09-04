@@ -1,0 +1,203 @@
+.filter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+  padding: var(--sp-4);
+  overflow-y: auto;
+  /* 목록이 아래쪽을 차지해야 하므로 필터는 내용만큼만 차지한다 */
+  flex: 0 0 auto;
+  max-height: 60%;
+}
+
+.filter-h {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  margin: 0 0 var(--sp-2);
+}
+
+.histo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.histo-svg {
+  width: 100%;
+  height: 72px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  touch-action: none; /* 드래그 선택이 스크롤로 새지 않게 */
+  cursor: crosshair;
+}
+
+.histo-bar { fill: #d4d4d8; }
+.histo-bar.on { fill: var(--accent); }
+
+.histo-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  font-size: var(--fs-md);
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.filter-verts {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: var(--sp-2) 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.filter-grade {
+  padding: 2px var(--sp-2);
+  border-radius: var(--r-full);
+  font-size: var(--fs-md);
+}
+
+/*
+ * 무게 등급은 무채색으로. 색은 지도의 데이터가 쓰는 언어라
+ * 패널의 상태 표시까지 색을 쓰면 둔다.
+ * 대신 명도로 등급을 읽힌다 — 무거울수록 진하게.
+ */
+.filter-grade.light {
+  background: var(--surface-2);
+  color: var(--text-dim);
+}
+.filter-grade.medium {
+  background: #e4e4e7;
+  color: #52525b;
+}
+.filter-grade.heavy {
+  background: #d4d4d8;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.filter-modes {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.filter-modes .chip {
+  flex: 1;
+}
+
+.filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: var(--h-md);
+  cursor: pointer;
+}
+
+.filter-toggle input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+}
+
+/* 제목 + 사용법을 한 줄에 — 안내는 남는 폭을 먹고 모자라면 줄인다 */
+.filter-hrow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  margin: 0 0 var(--sp-2);
+}
+
+.filter-hrow .filter-h { margin: 0; flex: none; }
+
+.filter-draghint {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  text-align: end;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.filter-hint {
+  color: var(--text-dim);
+  font-size: var(--fs-md);
+  margin: var(--sp-1) 0 0;
+}
+
+.filter-warn {
+  border: 1px solid var(--warn);
+  border-radius: var(--r-md);
+  padding: var(--sp-3);
+  background: color-mix(in srgb, var(--warn) 8%, transparent);
+}
+
+.filter-warn-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.daterange {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+}
+
+/* 시작 · 전체보기 · 끝을 한 줄에 */
+.daterange-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.daterange-date {
+  font: inherit;
+  font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 0 var(--sp-1);
+  min-height: var(--h-md);
+  flex: 1;
+  min-width: 0;
+}
+
+.daterange-date:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* 날짜 선택 아이콘이 어두운 배경에서 보이도록 */
+.daterange-date::-webkit-calendar-picker-indicator {
+  opacity: 0.55;
+  cursor: pointer;
+}
+
+.daterange-reset {
+  flex: none;
+  white-space: nowrap;
+  font-size: var(--fs-md);
+  padding: 0 var(--sp-2);
+  min-height: var(--h-md);
+}
+
+.daterange-error {
+  color: var(--danger);
+  font-size: var(--fs-md);
+  margin: 0;
+}
+
+/* 모바일 — 하단 시트가 좁으니 그래프 높이를 2/3 로 줄인다 */
+@media (max-width: 768px) {
+  .histo-svg { height: 48px; }
+}

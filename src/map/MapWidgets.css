@@ -1,0 +1,158 @@
+/*
+ * 지도 위 위젯 — 29px 정사각 버튼이 세로로 쌓이고, 누르면 왼쪽으로
+ * 패널·슬라이더가 펼쳐진다 (원본 trip 프로젝트와 같은 규칙).
+ */
+
+.mw {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+}
+
+.mw-btn {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow);
+  color: var(--text);
+}
+
+.mw-btn.on,
+.mw-btn[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: transparent;
+}
+
+/*
+ * 펼쳐지는 가로 슬라이더 — z축 세로 슬라이더와 같은 면을 깔아 둔다.
+ *
+ * 맨소뿐이면 지도 그림 위에 손잡이만 떠 있어 배경이 복잡한 곳에서는
+ * 어디서 어디까지가 슬라이더인지 보이지 않는다.
+ */
+.mw-slider {
+  width: 132px;
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--overlay-bg);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow);
+  accent-color: var(--accent);
+}
+
+/* 어두운 면 위에서는 먹색 손잡이가 사라진다 */
+[data-viz="true"] .mw-slider {
+  accent-color: #fafafa;
+}
+
+/* 시작·끝 색 판 — z축 슬라이더와 같은 면을 쓴다 */
+.mw-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--overlay-bg);
+  color: var(--overlay-text);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow);
+}
+
+.mw-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-md);
+  color: var(--overlay-dim);
+  white-space: nowrap;
+}
+
+.mw-row span { min-width: 44px; }
+
+.mw-row input[type="color"] {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--r-sm);
+  background: none;
+  cursor: pointer;
+}
+
+.mw-row input[type="range"] {
+  width: 84px;
+  accent-color: var(--accent);
+}
+
+/* 어두운 면 위에서는 먹색 손잡이가 사라진다 */
+[data-viz="true"] .mw-row input[type="range"] {
+  accent-color: #fafafa;
+}
+
+/* ── z축 세로 슬라이더 ───────────────────────────────────────────── */
+
+.zaxis {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-2);
+  background: var(--overlay-bg);
+  color: var(--overlay-text);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow);
+}
+
+.zaxis-cap {
+  font-size: var(--fs-sm);
+  color: var(--overlay-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/*
+ * 세로 슬라이더 — writing-mode 가 표준이고, 미지원 브라우저는
+ * -webkit-slider-vertical 로 떨어진다.
+ */
+.zaxis-slider {
+  /*
+   * 세로 슬라이더 — 위가 최대(높이 쌓임), 아래가 0(납작).
+   * vertical-rl 은 기본이 "아래=최소, 위=최대" 라 직관과 맞는다.
+   * 앞서 vertical-lr + direction:rtl 을 함께 줬더니 축이 반전돼
+   * 손잡이를 맨 아래로 내렸을 때 최대 높이가 되는 버그가 있었다.
+   */
+  writing-mode: vertical-lr;
+  direction: rtl;
+  -webkit-appearance: slider-vertical;
+  width: 24px;
+  height: 168px;
+  accent-color: var(--accent);
+  touch-action: none;
+}
+
+.zaxis-icon {
+  display: grid;
+  place-items: center;
+  color: var(--overlay-dim);
+}
+
+/* accent(먹색)는 어두운 바탕에서 안 보인다 */
+[data-viz="true"] .zaxis-slider {
+  accent-color: #fafafa;
+}
+
+@media (max-width: 768px) {
+  .zaxis-slider { height: 120px; }
+}
