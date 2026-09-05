@@ -25,6 +25,12 @@ interface Props {
   onPick?: (id: string | null, additive: boolean) => void;
   /** 마우스를 올린 대상의 설명 — 없으면 툴팁이 뜨지 않는다 */
   getTooltip?: (o: unknown) => string | null;
+  /**
+   * 툴팁을 HTML 로 — 막대 그래프처럼 글자로 안 되는 것에만 쓴다.
+   * getTooltip 보다 먼저 본다. 내용은 앱이 만든 것만 들어오고
+   * 사용자 입력은 섞이지 않는다(집계 수치와 막대뿐).
+   */
+  getTooltipHtml?: (o: unknown) => string | null;
   /** 로드 직후 맞출 범위 [[minLng,minLat],[maxLng,maxLat]] — 없으면 기본 시점 */
   fitTo?: [[number, number], [number, number]] | null;
   /**
@@ -53,7 +59,7 @@ const TINY_DRAG_PX = 4;
 const TINY_DRAG_TOUCH_PX = 12;
 
 export default function MapView({
-  layers, dark, rectSelect, onMapReady, onPick, getTooltip, fitTo, zAxis = 0,
+  layers, dark, rectSelect, onMapReady, onPick, getTooltip, getTooltipHtml, fitTo, zAxis = 0,
   showLabels = true,
 }: Props) {
   const mapRef = useRef<MapRef>(null);
@@ -257,9 +263,13 @@ export default function MapView({
         <DeckGLOverlay
           layers={layers}
           getTooltip={
-            getTooltip
+            getTooltipHtml || getTooltip
               ? ({ object }) => {
-                  const text = object ? getTooltip(object) : null;
+                  if (!object) return null;
+                  // 막대 그래프처럼 글자로 안 되는 것은 HTML 쪽이 맡는다
+                  const html = getTooltipHtml?.(object);
+                  if (html) return { html, className: "map-tip map-tip-rich" };
+                  const text = getTooltip?.(object) ?? null;
                   // 문자열이 아니라 객체로 돌려주면 deck 이 기본 검정 상자를
                   // 씌운다 — className 만 주고 모양은 CSS 로 잡는다
                   return text ? { text, className: "map-tip" } : null;

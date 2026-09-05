@@ -63,3 +63,49 @@
   transform: translate(8px, 8px);
   z-index: 5;
 }
+
+/*
+ * 집계 칸 툴팁 — 막대 그래프가 들어가는 넓은 쪽.
+ *
+ * 흰 바탕으로 못 박는다. 일반 툴팁은 --surface 를 쓰는데 시각화 모드에서는
+ * 그 값이 어두워져, 검은 막대가 검은 바탕에 묻힌다.
+ */
+.map-tip-rich {
+  background: #fff !important;
+  color: #18181b !important;
+  border-color: rgb(0 0 0 / 12%) !important;
+  /* 막대가 폭을 정한다 — 좌우 여백만 남긴다 */
+  white-space: normal;
+}
+
+/* 원본 수치 — 소수점 다섯째 자리까지라 자릿수를 고르게 */
+.tip-hours {
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* 전체 기간 중 비율 — 시간 아래, 한 단 작고 흐리게 */
+.tip-share {
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #52525b;
+  white-space: nowrap;
+}
+
+/*
+ * 언제 머물렀나 — 전체 기간을 가로축에 펼친 막대.
+ * 칸 자체 최대값에 맞춰 그리므로 높이는 칸끼리 견줄 수 없다.
+ */
+.tip-hist {
+  display: block;
+  margin-top: 4px;
+  fill: #476bbf;
+}
+
+/* 바닥 축 — 막대보다 진하게 둬야 값과 축이 구분된다 */
+.tip-hist-axis {
+  fill: #1e3a8a;
+}

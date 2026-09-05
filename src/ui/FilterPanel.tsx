@@ -14,8 +14,15 @@ export default function FilterPanel({ store }: { store: TimelineStore }) {
   // "전체 보기" 를 누른 횟수 — 히스토그램의 확대 창까지 함께 되돌린다
   const [resetNonce, setResetNonce] = useState(0);
 
-  // 궤적이 하나도 없으면(체류점만 있는 파일) 체류점으로 히스토그램을 그린다
-  const histoItems = data.tracks.length > 0 ? data.tracks : data.visits;
+  /*
+   * 히스토그램은 체류점으로 그린다 — 막대 높이가 체류 시간이라
+   * 머문 시간이 없는 궤적으로는 셀 수 없다.
+   *
+   * 개수로 세던 때는 궤적이 있으면 궤적을 썼지만, 개수로는 짧은 방문
+   * 여러 번과 긴 체류 하나가 구분되지 않아 기록이 통째로 빠진 시기가
+   * 보이지 않았다.
+   */
+  const histoItems = data.visits;
 
   return (
     <div className="filter">

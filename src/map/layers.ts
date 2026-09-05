@@ -46,6 +46,13 @@ export interface LayerInput {
   tiles?: TileStay[];
   /** 칸 위에 쓸 글자 — 집계된 분을 사람이 읽는 말로 */
   tileLabel?: (minutes: number) => string;
+  /**
+   * 비율의 분모 — 첫 기록부터 마지막 기록까지의 전체 시간(분).
+   *
+   * 여기서는 알 수 없어 밖에서 받는다. 없으면 집계 합으로 떨어지지만,
+   * 그때는 화면의 숫자와 요약 줄이 서로 다른 분모를 쓰게 된다.
+   */
+  tileTotalMinutes?: number;
 }
 
 /**
@@ -223,9 +230,16 @@ export function buildLayers(input: LayerInput): Layer[] {
  * 볼 때 온 칸이 투명해진다.
  */
 function tileLayers(input: LayerInput, tiles: TileStay[]): Layer[] {
-  const { tileLabel } = input;
-  // 비율의 분모 — 지금 집계된 체류시간 전부. 모든 칸을 더하면 100% 가 된다
-  const total = tiles.reduce((sum, d) => sum + d.minutes, 0);
+  const { tileLabel, tileTotalMinutes } = input;
+  /*
+   * 비율의 분모는 전체 기간이다 — 화면에 분모가 적히지 않으니 보는 사람은
+   * 당연히 "전체 중 몇 %" 로 읽는다. 그래서 칸들의 합은 100% 에 못 미치고,
+   * 모자라는 몫이 이동 시간이다(요약 줄이 그 몫을 밝힌다).
+   */
+  const total =
+    tileTotalMinutes && tileTotalMinutes > 0
+      ? tileTotalMinutes
+      : tiles.reduce((sum, d) => sum + d.minutes, 0);
 
   /*
    * 색은 로그 눈금으로 — "10배 더 오래 = 한 단계 진하게".

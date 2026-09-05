@@ -34,6 +34,7 @@ export const en: Dict = {
     pick: "Choose file",
     appTitle: "Timeline Explorer",
     maker: "Made by VWL Inc.",
+    updated: "last updated : 2026.09.05",
     source: "View source",
     reading: "Reading file…",
     parsing: "Analyzing",
@@ -71,7 +72,7 @@ export const en: Dict = {
     cancel: "Cancel",
   },
   filter: {
-    title: "Period",
+    title: "Period (stay time)",
     dragHint: "Drag across the chart to pick a range",
     reset: "Show all",
     from: "From",
@@ -123,7 +124,10 @@ export const en: Dict = {
     zAxisOff: "Z",
     labels: "Map labels",
     tileStay: "Stay totals",
-    tileNote: "Time in transit is excluded; overlapping records are counted twice (~1%).",
+    tileSummary: "Of {total}: {stay} ({stayPct}%) staying,",
+    tileSummaryRest: "{other} ({otherPct}%) other incl. travel",
+    tileSummaryNote:
+      "The histogram at the top of the filter panel shows where records are thin.",
     tileHour: "h",
     tileDay: "d",
     tileMonth: "mo",

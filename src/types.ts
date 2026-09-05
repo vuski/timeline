@@ -68,4 +68,12 @@ export interface TimelineData {
   totalVerts: number;
   /** "2024" → 19179 */
   vertsByYear: Record<string, number>;
+  /**
+   * 이동 구간 [시작ms, 끝ms] — activity 세그먼트의 시각만, 시작 오름차순.
+   *
+   * 좌표는 담지 않는다. 파서가 activity 를 그리지 않는 이유는 좌표가
+   * 출발·도착 두 개뿐이라 실측 궤적과 겹치기 때문인데(51%), 시간을 세는
+   * 데는 그 구간이 있어야 이동과 공백이 갈린다.
+   */
+  moveSpans: Array<[number, number]>;
 }

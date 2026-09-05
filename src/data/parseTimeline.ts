@@ -89,6 +89,11 @@ export function parseTimeline(
   // 일(체류/이동)의 날짜이기 때문. 좌표가 깨져서 지도에 못 그린다고 그 날의
   // 기록 자체가 없었던 것은 아니다.
   const days: string[] = [];
+  /*
+   * 이동 구간 — activity 세그먼트의 시각만. 좌표는 담지 않는다.
+   * 그리기에는 쓰이지 않고 "얼마나 이동 중이었나" 를 세는 데만 쓴다.
+   */
+  const moveSpans: Array<[number, number]> = [];
 
   const list = segs as Seg[];
   for (let i = 0; i < list.length; i++) {
@@ -150,9 +155,22 @@ export function parseTimeline(
     }
 
     // ── activity ──
-    // 좌표는 쓰지 않는다(위 주석 참고). 다만 그날 무언가 있었다는 사실은
-    // 전체 기간 계산에 반영한다.
-    if (asRecord(seg.activity)) days.push(segStart.slice(0, 10));
+    /*
+     * 좌표는 쓰지 않는다(위 주석 참고). 다만 그날 무언가 있었다는 사실은
+     * 전체 기간 계산에 반영한다.
+     *
+     * 시간 구간은 따로 모은다. 그리는 데는 쓰지 않지만, "언제 이동
+     * 중이었나" 를 세려면 이것이라야 한다 — 실측 파일에서 timelinePath
+     * 만으로 세면 이동 325일·기록없음 255일이 나오는데, activity 까지
+     * 넣으면 507일·73일이다. 버려 둔 182일이 이동이 아니라 "기록 없음"
+     * 으로 잘못 분류되고 있었다.
+     */
+    if (asRecord(seg.activity)) {
+      days.push(segStart.slice(0, 10));
+      const a = Date.parse(segStart);
+      const b = Date.parse(segEnd);
+      if (Number.isFinite(a) && Number.isFinite(b) && b > a) moveSpans.push([a, b]);
+    }
   }
 
   // ── 체류 시간에 걸린 정점을 잘라낸다 ──
@@ -211,6 +229,8 @@ export function parseTimeline(
     spanTo: days.at(-1) ?? "",
     totalVerts,
     vertsByYear,
+    // 시작 시각 오름차순 — 세는 쪽에서 정렬을 다시 하지 않게
+    moveSpans: moveSpans.sort((x, y) => x[0] - y[0]),
   };
 }
 

@@ -38,6 +38,7 @@ const data: TimelineData = {
   spanTo: "2016-06-01",
   totalVerts: 4,
   vertsByYear: { "2015": 2, "2016": 2 },
+  moveSpans: [],
 };
 
 const setup = () => renderHook(() => useTimelineStore(data));
@@ -195,5 +196,31 @@ describe("useTimelineStore", () => {
   it("등급을 함께 알려준다", () => {
     const { result } = setup();
     expect(["light", "medium", "heavy"]).toContain(result.current.grade);
+  });
+});
+
+describe("모드 전환과 시간 집계", () => {
+  /*
+   * 집계는 편집 전용이라 시각화에서는 아무것도 그리지 않는다. 켜진 채
+   * 두면 편집으로 돌아왔을 때 점과 궤적이 사라진 이유를 알 길이 없다.
+   */
+  it("시각화로 넘어가면 집계가 풀린다", () => {
+    const { result } = renderHook(() => useTimelineStore(data));
+
+    act(() => result.current.setTileStay(true));
+    expect(result.current.tileStay).toBe(true);
+
+    act(() => result.current.setRenderMode(true));
+    expect(result.current.renderMode).toBe(true);
+    expect(result.current.tileStay).toBe(false);
+  });
+
+  /* 편집으로 돌아올 때는 건드리지 않는다 — 켜는 것은 사용자 몫이다 */
+  it("편집으로 돌아온다고 집계가 켜지지는 않는다", () => {
+    const { result } = renderHook(() => useTimelineStore(data));
+
+    act(() => result.current.setRenderMode(true));
+    act(() => result.current.setRenderMode(false));
+    expect(result.current.tileStay).toBe(false);
   });
 });

@@ -77,6 +77,9 @@ export default function DropZone({ state, onFile }: Props) {
         {t("drop.maker")}
       </a>
 
+      {/* 마지막 갱신 — 제작자와 같은 크기로, 바로 아래 */}
+      <p className="dropzone-updated">{t("drop.updated")}</p>
+
       {/*
         * 표지 그림 — 이 도구가 뭐를 만드는지 문장보다 빨리 말해 준다.
         * 번들에 담아 외부 요청 없이 띄운다.

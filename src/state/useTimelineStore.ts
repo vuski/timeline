@@ -65,6 +65,19 @@ export function useTimelineStore(data: TimelineData) {
   const [showLabels, setShowLabels] = useState(true);
   // 체류 집계 — 켜면 점·궁적을 잠시 내리고 타일별 체류시간을 덮는다
   const [tileStay, setTileStay] = useState(false);
+
+  /*
+   * 모드를 바꿀 때 집계를 끈다 — 집계는 편집 전용이라 시각화에서는
+   * 아무것도 그리지 않는다. 켜진 채 두면 편집으로 돌아왔을 때 점과
+   * 궤적이 사라진 이유를 알 길이 없다.
+   *
+   * UI 가 아니라 여기서 처리한다. 전환 경로가 늘어나도 규칙이 한 곳에
+   * 남는다.
+   */
+  const changeRenderMode = useCallback((on: boolean) => {
+    setRenderMode(on);
+    if (on) setTileStay(false);
+  }, []);
   const [glowStyle, setGlowStyle] = useState<GlowStyle>(GLOW_STYLE_DEFAULT);
 
   // ── 지금 보이는 것 ──
@@ -183,7 +196,7 @@ export function useTimelineStore(data: TimelineData) {
     deletedIds, deletedCount, selectedIds,
     select, clearSelection, invert, deleteSelected, keepOnlySelected, restoreDeleted,
     baseOffset, setBaseOffset,
-    renderMode, setRenderMode,
+    renderMode, setRenderMode: changeRenderMode,
     zAxis, setZAxis,
     showArrows, setShowArrows,
     showLabels, setShowLabels,

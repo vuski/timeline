@@ -40,6 +40,13 @@
   }
 }
 
+/* 마지막 갱신 — 제작자와 같은 크기·색 */
+.dropzone-updated {
+  margin: 2px 0 0;
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+}
+
 /*
  * 표지 — 어두운 그림이라 큰 여백 위에 그냥 두면 둥려 보인다.
  * 모서리를 둥글리고 테두리를 둘러 바닥에 앉힌다.

@@ -26,6 +26,10 @@ const CAP_MAX = 30;
 const URL_RATIO = 0.022;
 const URL_MIN = 11;
 const URL_MAX = 22;
+/* 집계 요약 — 주소보다 조금 크게. 읽으라고 넣는 줄이다 */
+const SUM_RATIO = 0.026;
+const SUM_MIN = 12;
+const SUM_MAX = 26;
 
 const FONT = '"Pretendard Variable", Pretendard, system-ui, sans-serif';
 
@@ -64,6 +68,91 @@ function fitSize(
   return s;
 }
 
+/**
+ * 집계 요약 상자 — 화면의 .ws-tilesum 과 같은 모양.
+ *
+ * 흰 바탕에 얇은 테두리, 가운데 정렬 두 줄. 둘째 줄(오차 안내)은 한 단
+ * 작고 흐리게 — 화면과 같은 위계다.
+ *
+ * 글자에는 버퍼를 두르지 않는다. 흰 상자 위라 검은 글씨가 그대로 읽힌다.
+ *
+ * @param bottom 상자의 아래 끝
+ */
+function drawSummaryBox(
+  ctx: CanvasRenderingContext2D,
+  summary: StampSummary,
+  mid: number,
+  bottom: number,
+  canvasWidth: number,
+  size: number,
+): void {
+  const noteSize = size * 0.78;
+  const padX = size * 0.9;
+  const padY = size * 0.6;
+  const gap = size * 0.35;
+
+  // 상자는 화면과 같이 폭의 90% — 글자는 그 안쪽 여백까지 고려해 줄인다
+  const boxW = canvasWidth * 0.9;
+  const inner = boxW - padX * 2;
+  /*
+   * 첫 줄은 굵은 앞부분과 작은 뒷부분이 이어진다. 둘을 각각 줄이면
+   * 크기 비가 흐트러지므로, 합친 폭으로 한 번에 재서 같은 비율로 줄인다.
+   */
+  const restRatio = 0.78;
+  const head = summary.line + (summary.rest ? ` ${summary.rest}` : "");
+  const lineSize = fitSize(ctx, head, size, inner);
+  const restSize = lineSize * restRatio;
+  const fittedNote = fitSize(ctx, summary.note, noteSize, inner);
+
+  const boxH = padY * 2 + lineSize + gap + fittedNote;
+  const left = mid - boxW / 2;
+  const top = bottom - boxH;
+
+  const r = size * 0.5;
+  ctx.save();
+  ctx.beginPath();
+  /*
+   * roundRect 는 비교적 늦게 들어온 API 다 — 없으면 각진 상자로 떨어진다.
+   * 모서리가 각진 것보다 상자가 통째로 사라지는 편이 나쁘다.
+   */
+  if (typeof ctx.roundRect === "function") ctx.roundRect(left, top, boxW, boxH, r);
+  else ctx.rect(left, top, boxW, boxH);
+  ctx.fillStyle = "rgba(255, 255, 255, 0.94)";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(0, 0, 0, 0.14)";
+  ctx.lineWidth = Math.max(1, size * 0.06);
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+
+  /*
+   * 앞은 굵게, 뒤는 작게 — 화면과 같은 모양. 가운데 정렬을 유지하려면
+   * 두 조각의 폭을 합쳐 왼쪽 끝을 먼저 잡아야 한다.
+   */
+  ctx.fillStyle = "#18181b";
+  ctx.textAlign = "left";
+  ctx.font = `700 ${lineSize}px ${FONT}`;
+  const headW = ctx.measureText(summary.line).width;
+  ctx.font = `400 ${restSize}px ${FONT}`;
+  const restW = summary.rest ? ctx.measureText(` ${summary.rest}`).width : 0;
+  const startX = mid - (headW + restW) / 2;
+
+  ctx.font = `700 ${lineSize}px ${FONT}`;
+  ctx.fillText(summary.line, startX, top + padY);
+  if (summary.rest) {
+    ctx.font = `400 ${restSize}px ${FONT}`;
+    // 큰 글자의 밑선에 맞춘다 — 위쪽 정렬이면 작은 글자가 떠 보인다
+    ctx.fillText(` ${summary.rest}`, startX + headW, top + padY + (lineSize - restSize));
+  }
+  ctx.textAlign = "center";
+
+  ctx.font = `600 ${fittedNote}px ${FONT}`;
+  ctx.fillStyle = "#52525b";
+  ctx.fillText(summary.note, mid, top + padY + lineSize + gap);
+}
+
 function drawLine(
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -88,7 +177,20 @@ function drawLine(
  * 지도 캔버스는 WebGL 이라 2D 컨텍스트로 글자를 쓸 수 없다. 같은 크기의
  * 2D 캔버스에 옴겨 그리고 그쪽을 내보낸다(녹화의 record.ts 와 같은 방식).
  */
-export function stampCanvas(source: HTMLCanvasElement, caption?: string): HTMLCanvasElement {
+export interface StampSummary {
+  /** 첫 줄 앞부분 — "총 12년 4개월 중 체류 …". 굵게 */
+  line: string;
+  /** 같은 줄 뒷부분 — "기타 …". 작게, 같은 색 */
+  rest: string;
+  /** 둘째 줄 — 오차 안내. 화면과 같은 문장 */
+  note: string;
+}
+
+export function stampCanvas(
+  source: HTMLCanvasElement,
+  caption?: string,
+  summary?: StampSummary,
+): HTMLCanvasElement {
   const out = document.createElement("canvas");
   out.width = source.width;
   out.height = source.height;
@@ -102,6 +204,7 @@ export function stampCanvas(source: HTMLCanvasElement, caption?: string): HTMLCa
 
   const capSize = sizeOf(CAP_RATIO, CAP_MIN, CAP_MAX, out.height);
   const urlSize = sizeOf(URL_RATIO, URL_MIN, URL_MAX, out.height);
+  const sumSize = sizeOf(SUM_RATIO, SUM_MIN, SUM_MAX, out.height);
 
   if (caption) {
     ctx.textBaseline = "top";
@@ -111,18 +214,38 @@ export function stampCanvas(source: HTMLCanvasElement, caption?: string): HTMLCa
   }
 
   ctx.textBaseline = "bottom";
-  drawLine(ctx, SHARE_URL, mid, out.height - urlSize * 0.7, urlSize);
+  const urlY = out.height - urlSize * 0.7;
+  drawLine(ctx, SHARE_URL, mid, urlY, urlSize);
+
+  /*
+   * 집계 요약은 주소 바로 위에 — 격자에 적힌 비율이 무엇에 대한
+   * 비율인지 밝히는 줄이라, 그 숫자와 함께 남아야 뜻이 산다.
+   *
+   * 화면의 요약 상자(.ws-tilesum)와 같은 모양으로 그린다. 글자만
+   * 얹으면 지도 위에서 읽히지 않고, 무엇보다 화면에서 본 것과 다른
+   * 그림이 저장되면 그것대로 당황스럽다.
+   */
+  if (summary) {
+    drawSummaryBox(ctx, summary, mid, urlY - urlSize * 1.4, out.width, sumSize);
+  }
 
   return out;
 }
 
-/** @param caption 이미지 맨 위에 새길 한 줄. 비면 주소만 들어간다 */
-export function captureMap(map: CapturableMap, caption?: string): Promise<Blob> {
+/**
+ * @param caption 이미지 맨 위에 새길 한 줄. 비면 주소만 들어간다
+ * @param summary 아래 주소 위에 새길 집계 요약. 시간 집계 중일 때만
+ */
+export function captureMap(
+  map: CapturableMap,
+  caption?: string,
+  summary?: StampSummary,
+): Promise<Blob> {
   return new Promise((resolve, reject) => {
     // 다시 그리게 한 뒤 그 프레임에서 읽는다 — 지운 직후의 빈 버퍼를 읽지 않도록
     map.triggerRepaint();
     requestAnimationFrame(() => {
-      stampCanvas(map.getCanvas(), caption).toBlob((blob) => {
+      stampCanvas(map.getCanvas(), caption, summary).toBlob((blob) => {
         if (blob) resolve(blob);
         else reject(new Error("capture-failed"));
       }, "image/png");

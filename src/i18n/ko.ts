@@ -44,6 +44,7 @@ export const ko = {
     pick: "파일 선택",
     appTitle: "Timeline Explorer",
     maker: "제작 : VWL Inc.",
+    updated: "last updated : 2026.09.05",
     source: "소스 보기",
     reading: "파일 읽는 중…",
     parsing: "분석 중",
@@ -81,7 +82,7 @@ export const ko = {
     cancel: "취소",
   },
   filter: {
-    title: "기간",
+    title: "기간(체류 시간)",
     dragHint: "그래프를 드래그해 구간을 고를 수 있습니다",
     reset: "전체 보기",
     from: "시작",
@@ -135,8 +136,11 @@ export const ko = {
     zAxisOff: "z축",
     labels: "배경 글자",
     tileStay: "시간 집계",
-    tileNote:
-      "이동 중인 시간은 빠지고, 겹친 기록은 중복으로 더해집니다(약 1%).",
+    /* 앞은 굵게, 뒤는 작게 — 한 줄에 이어 붙는다 */
+    tileSummary: "총 {total} 중 체류 {stay}({stayPct}%)",
+    tileSummaryRest: "기타 {other}({otherPct}%, 이동 포함)",
+    tileSummaryNote:
+      "조회 패널 상단 히스토그램에서 기록이 부족한 구간을 확인할 수 있습니다.",
     tileHour: "시간",
     tileDay: "일",
     tileMonth: "개월",

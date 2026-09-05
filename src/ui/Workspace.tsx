@@ -8,7 +8,10 @@ import {
 import { zMetersPerSecond, zSpanMeters } from "../map/zscale";
 import { LABEL_MAX, buildLayers, labelTargets } from "../map/layers";
 import { trackTimeRange } from "../data/rows";
-import { aggregateStays, displayZoom, formatStayLong } from "../data/tiles";
+import {
+  aggregateStays, displayZoom, formatShareExact, formatSpan, formatStayFull,
+  formatStayLong, histogramSvg, summarize, type TileStay,
+} from "../data/tiles";
 import { formatAt, offsetLabel } from "../data/timezone";
 import { anchorsOf } from "../data/connect";
 import { boundsOf, visitsIn, type LngLat, type SelectMode } from "../data/select";
@@ -346,15 +349,117 @@ export default function Workspace({ data, onReload }: Props) {
     [tileStay, visibleVisits, mapZoom],
   );
 
-  const tileLabel = useCallback(
-    (minutes: number) =>
-      formatStayLong(minutes, {
-        hour: t("render.tileHour"),
-        day: t("render.tileDay"),
-        month: t("render.tileMonth"),
-        year: t("render.tileYear"),
-      }),
+
+  /*
+   * 셈의 테두리 — 사용자가 고른 기간. 고르지 않았으면 전체다.
+   *
+   * 이동 구간은 원본(data.moveSpans)이라 기간 필터를 거치지 않는다.
+   * 창을 함께 넘겨야 걸친 구간이 잘려 비율이 100% 를 넘지 않는다.
+   */
+  const summaryWindow = useMemo(() => {
+    const r = store.range;
+    if (!r) return undefined;
+    const startMs = Date.parse(r.from);
+    const endMs = Date.parse(r.to);
+    return Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs
+      ? { startMs, endMs }
+      : undefined;
+  }, [store.range]);
+
+  /*
+   * 기간 요약 — 칸의 비율이 무엇에 대한 비율인지 밝히는 줄.
+   *
+   * 줌과 무관하므로 tiles 와 따로 계산한다. 격자만 잘게 바뀌었다고
+   * 총 기간이 달라지지는 않는다.
+   */
+  const staySummary = useMemo(
+    /*
+     * 궤적은 store 의 visibleTracks 가 아니라 원본을 쓴다.
+     *
+     * visibleTracks 는 그리기용으로 가공된 것이라 '이동구간' 모드에서는
+     * 원본을 버리고 체류점 사이를 호로 잇는다. 그 호는 체류 시간과 겹쳐
+     * 이동이 0 으로 나온다 — 여기서 세려는 것은 "실제로 이동 기록이 있던
+     * 시간" 이므로 원본이라야 한다.
+     *
+     * 기간 필터는 반영해야 하므로 보이는 체류 구간으로 잘라 쓴다.
+     */
+    () =>
+      tileStay
+        ? summarize(visibleVisits, data.moveSpans, summaryWindow)
+        : undefined,
+    [tileStay, visibleVisits, data.moveSpans, summaryWindow],
+  );
+
+  // 칸 위 글자와 요약 줄이 같은 단위 말을 쓴다
+  const stayUnits = useMemo(
+    () => ({
+      hour: t("render.tileHour"),
+      day: t("render.tileDay"),
+      month: t("render.tileMonth"),
+      year: t("render.tileYear"),
+    }),
     [t],
+  );
+
+  const tileLabel = useCallback(
+    (minutes: number) => formatStayLong(minutes, stayUnits),
+    [stayUnits],
+  );
+  /*
+   * 칸에 마우스를 얹었을 때 — 뭉뚱그린 라벨 대신 원본 수치와,
+   * 전체 기간 중 언제 머물렀는지를 막대로 보여준다.
+   */
+  /*
+   * 요약 문장 — 화면과 공유 이미지가 같은 줄을 쓴다.
+   *
+   * JSX 안에서 조립하면 이미지 쪽에서 다시 만들어야 하고, 그러면 둘이
+   * 조용히 어긋난다.
+   */
+  const summaryText = useMemo(() => {
+    if (!staySummary) return undefined;
+    return {
+      line: t("render.tileSummary")
+        .replace("{total}", formatSpan(staySummary.totalMinutes, stayUnits))
+        .replace("{stay}", formatSpan(staySummary.stayMinutes, stayUnits))
+        .replace("{stayPct}", String(staySummary.stayPct)),
+      rest: t("render.tileSummaryRest")
+        /*
+         * 이동과 공백을 "기타" 로 묶는다.
+         *
+         * 갈라 세 봤지만 그 경계를 믿을 수 없었다. 구글은 기록이 끊긴
+         * 구간을 출발·도착 두 점만으로 잇는 activity 하나로 만든다 —
+         * 실측 파일에 5.8일짜리 "이동" 이 있었고, 하루를 넘는 것이 37건
+         * 74일이었다. 그것을 이동으로 세면 "기록 없음" 이 실제보다 작게
+         * 나온다(2% 로 나왔지만 히스토그램에는 그보다 크게 비어 보였다).
+         *
+         * 그래서 둘을 묶되 "이동" 이라고 부르지 않는다. 어느 쪽인지 정확히
+         * 가를 수 없다는 것이 지금 데이터로 말할 수 있는 전부다. 어디가
+         * 비었는지는 히스토그램이 보여준다(아래 안내 줄).
+         */
+        .replace(
+          "{other}",
+          formatSpan(staySummary.moveMinutes + staySummary.gapMinutes, stayUnits),
+        )
+        .replace("{otherPct}", String(staySummary.movePct + staySummary.gapPct)),
+      note: t("render.tileSummaryNote"),
+    };
+  }, [staySummary, stayUnits, t]);
+
+  const getTileTooltip = useCallback(
+    (o: unknown) => {
+      const d = o as Partial<TileStay>;
+      if (!Array.isArray(d?.hist) || typeof d.minutes !== "number") return null;
+      // 격자에 적힌 값(반올림)과 같은 분모를 쓴다 — 전체 기간
+      const share = staySummary
+        ? formatShareExact(d.minutes, staySummary.totalMinutes)
+        : "";
+      return (
+        `<div class="tip-hours">${formatStayFull(d.minutes, stayUnits)}</div>` +
+        (share ? `<div class="tip-share">${share}</div>` : "") +
+        histogramSvg(d.hist)
+      );
+    },
+    [stayUnits, staySummary],
   );
 
   // 레이어는 데이터·스타일·재생여부가 바뀔 때만 다시 만든다
@@ -373,13 +478,15 @@ export default function Workspace({ data, onReload }: Props) {
       showArrows,
       tiles,
       tileLabel,
+      // 칸의 비율과 요약 줄이 같은 분모를 쓰게 한다
+      tileTotalMinutes: staySummary?.totalMinutes,
     });
     layersRef.current = built;
     return built;
   }, [
     visibleVisits, visibleTracks, renderMode, glowStyle, selectedIds,
     playback.timeFiltered, playback.trailMs, span.startMs, playback.timeRef,
-    zPerSec, showArrows, tiles, tileLabel,
+    zPerSec, showArrows, tiles, tileLabel, staySummary,
   ]);
 
   /** 목록에서 고른 것으로 지도를 옮긴다 — 한 점이면 확대, 여러 개면 맞춤 */
@@ -501,14 +608,27 @@ ${formatAt(d.startMs, d.offsetMin)} ${offsetLabel(d.offsetMin)}`
           zAxis={zAxis}
           onMapReady={(m) => {
             mapRef.current = m;
-            // 체류 집계의 격자 크기를 줄에 맞춘다 — 정수가 바될 때만 다시 그린다
-            m.on("zoomend", () => setMapZoom(m.getZoom()));
+            /*
+             * 체류 집계의 격자 크기를 줌에 맞춘다.
+             *
+             * 지금 줌을 곧바로 한 번 읽는다 — zoomend 만 걸어 두면 사용자가
+             * 확대·축소를 한 번도 하지 않은 동안 초기값(2)이 그대로 남아,
+             * 화면은 동네를 보고 있는데 격자만 대륙 크기로 그려졌다.
+             *
+             * flyTo(fitTo)처럼 프로그램이 옮기는 경우는 zoomend 가 아니라
+             * moveend 로 끝나기도 해서 둘 다 건다.
+             */
+            setMapZoom(m.getZoom());
+            const sync = () => setMapZoom(m.getZoom());
+            m.on("zoomend", sync);
+            m.on("moveend", sync);
           }}
           // 영역 드래그 중에는 클릭 픽을 끈다 — 드래그 끝의 클릭이
           // 방금 만든 선택을 지워 버린다
           // 집계 중에는 점·궁적이 없다 — 골라낼 것도 설명할 것도 없다
           onPick={renderMode || selecting || tileStay ? undefined : onPick}
           getTooltip={renderMode || tileStay ? undefined : getTooltip}
+          getTooltipHtml={tileStay && !renderMode ? getTileTooltip : undefined}
           rectSelect={
             selecting ? { onDone: onRectDone, onCancel: () => setSelecting(false) } : undefined
           }
@@ -526,6 +646,7 @@ ${formatAt(d.startMs, d.offsetMin)} ${offsetLabel(d.offsetMin)}`
           aria-pressed={renderMode}
           onClick={() => {
             track("mode_toggle", { to: renderMode ? "edit" : "visualize" });
+            // 집계 해제는 스토어가 함께 처리한다
             store.setRenderMode(!renderMode);
           }}
         >
@@ -533,6 +654,27 @@ ${formatAt(d.startMs, d.offsetMin)} ${offsetLabel(d.offsetMin)}`
               테두리 색이 현재 모드를 말한다(남색 편집 / 노랑 시각화) */}
           {renderMode ? t("render.vizBadge") : t("render.editBadge")}
         </button>
+
+        {/*
+          * 집계 요약 — 칸에 적힌 비율이 무엇에 대한 비율인지 밝힌다.
+          *
+          * 분모를 적지 않으면 보는 사람은 당연히 "전체 기간 중" 으로 읽는다.
+          * 실측 파일에서 그 차이가 컸다 — 같은 칸이 체류 기준 95%, 전체 기준
+          * 86% 였다. 그래서 분모를 전체로 맞추고, 그 전체가 무엇인지 여기 쓴다.
+          *
+          * 이동은 따로 세지 않고 전체에서 체류를 뺀 나머지다. 그 나머지에는
+          * 기록이 아예 없는 공백도 섞여 있어(실측 4일가량) 아래 줄에 밝힌다.
+          */}
+        {tileStay && staySummary && (
+          <div className="ws-tilesum" role="status">
+            <p className="ws-tilesum-line">
+              {summaryText?.line}{" "}
+              {/* 뒤는 작게 — 아래 안내 줄과 같은 크기, 다만 색은 본문 그대로 */}
+              <span className="ws-tilesum-rest">{summaryText?.rest}</span>
+            </p>
+            <p className="ws-tilesum-note">{t("render.tileSummaryNote")}</p>
+          </div>
+        )}
 
         <div className="ws-tools">
           {/* 영역 선택 → 삭제 되돌리기 → 영상 저장 → 공유 순 */}
@@ -659,17 +801,6 @@ ${formatAt(d.startMs, d.offsetMin)} ${offsetLabel(d.offsetMin)}`
         <div className="ws-zaxis" data-hidden={String(!renderMode)}>
           <ZAxisSlider value={zAxis} onValue={store.setZAxis} spanMeters={zHeight} />
         </div>
-
-        {/*
-          * 집계의 한계를 적어 둔다 — 숫자를 그대로 믿게 두면 안 된다.
-          * 이동 중인 시간은 체류가 아니라 빠지고(실측 12.9%), 구글이 같은
-          * 시간에 두 장소를 겹쳐 기록한 것은 중복으로 더해진다(실측 약 1%).
-          */}
-        {tileStay && !renderMode && (
-          <p className="ws-labelnote" role="status">
-            {t("render.tileNote")}
-          </p>
-        )}
 
         {/* 선택이 많으면 라벨을 다 찍지 못한다 — 무엇이 보이는지 알려 준다 */}
         {labelOverflow > 0 && !renderMode && (
@@ -806,7 +937,14 @@ ${formatAt(d.startMs, d.offsetMin)} ${offsetLabel(d.offsetMin)}`
         />
       )}
 
-      {sharing && <ShareSheet getMap={() => mapRef.current} onClose={() => setSharing(false)} />}
+      {sharing && (
+        <ShareSheet
+          getMap={() => mapRef.current}
+          // 집계 중일 때만 — 격자가 없으면 설명할 비율도 없다
+          summary={tileStay ? summaryText : undefined}
+          onClose={() => setSharing(false)}
+        />
+      )}
     </div>
   );
 }

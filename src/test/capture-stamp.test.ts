@@ -32,6 +32,15 @@ function fakeCanvas(width = 1200, height = 800) {
     // 글자 하나를 크기의 0.6배로 친다 (한글 기준 어림)
     measureText: (t: string) => ({ width: t.length * sizeOfFont() * 0.6 }),
     drawImage: () => calls.push("draw"),
+    save: () => {},
+    restore: () => {},
+    beginPath: () => {},
+    roundRect: (x: number, y: number, w: number, h: number) =>
+      calls.push(`box:${x}|${y}|${w}|${h}`),
+    rect: (x: number, y: number, w: number, h: number) =>
+      calls.push(`box:${x}|${y}|${w}|${h}`),
+    fill: () => calls.push("boxfill"),
+    stroke: () => calls.push("boxstroke"),
     strokeText: (t: string) => calls.push(`stroke:${t}`),
     fillText: (t: string, x: number, y: number) =>
       calls.push(`fill:${t}|${x}|${y}|${sizeOfFont()}`),
@@ -176,5 +185,110 @@ describe("파일명", () => {
     expect(snapshotName(new Date(2026, 8, 4, 15, 30, 12))).not.toBe(
       snapshotName(new Date(2026, 8, 4, 15, 30, 13)),
     );
+  });
+});
+
+describe("stampCanvas 집계 요약", () => {
+  const SUM = {
+    line: "총 12년 4개월 중 체류 10년 9개월(87%)",
+    rest: "기타 1년 6개월(13%, 이동 포함)",
+    note: "조회 패널 상단 히스토그램에서 기록이 부족한 구간을 확인할 수 있습니다.",
+  };
+
+  /** "box:x|y|w|h" 를 뜯는다 */
+  const box = (calls: string[]) => {
+    const hit = calls.find((c) => c.startsWith("box:"));
+    if (!hit) return null;
+    const [x, y, w, h] = hit.slice("box:".length).split("|").map(Number);
+    return { x, y, w, h };
+  };
+
+  /*
+   * 격자에 적힌 비율이 무엇에 대한 비율인지 밝히는 줄이다. 그 숫자를
+   * 담은 그림에 이 줄이 없으면 이미지를 받은 사람은 분모를 알 수 없다.
+   */
+  it("두 줄을 모두 새긴다 — 요약과 오차 안내", () => {
+    const { calls } = fakeCanvas(1200, 800);
+    stampCanvas(src, undefined, SUM);
+    expect(drawn(calls, SUM.line)).not.toBeNull();
+    expect(drawn(calls, SUM.note)).not.toBeNull();
+  });
+
+  /* 화면의 요약 상자와 같은 모양이어야 저장한 그림이 낯설지 않다 */
+  it("흰 상자를 깔고 그 위에 쓴다", () => {
+    const { calls } = fakeCanvas(1200, 800);
+    stampCanvas(src, undefined, SUM);
+    expect(calls).toContain("boxfill");
+    expect(calls).toContain("boxstroke");
+
+    const b = box(calls)!;
+    expect(b).not.toBeNull();
+    // 화면과 같이 폭의 90%
+    expect(b.w).toBeCloseTo(1200 * 0.9, 5);
+    // 글자가 상자 안에 든다
+    expect(drawn(calls, SUM.line)!.y).toBeGreaterThanOrEqual(b.y);
+    expect(drawn(calls, SUM.note)!.y).toBeLessThan(b.y + b.h);
+  });
+
+  it("주소 위에, 화면 아래쪽에 놓는다", () => {
+    const { calls } = fakeCanvas(1200, 800);
+    stampCanvas(src, undefined, SUM);
+    const b = box(calls)!;
+    const url = drawn(calls, SHARE_URL)!;
+    expect(b.y + b.h).toBeLessThanOrEqual(url.y);
+    expect(b.y).toBeGreaterThan(800 * 0.6);
+  });
+
+  /* 오차 안내는 화면과 같은 위계 — 한 단 작게 */
+  it("오차 안내를 요약보다 작게 쓴다", () => {
+    const { calls } = fakeCanvas(1200, 800);
+    stampCanvas(src, undefined, SUM);
+    expect(drawn(calls, SUM.note)!.size).toBeLessThan(drawn(calls, SUM.line)!.size);
+  });
+
+  /* 앞은 굵게, 뒤는 작게 — 화면과 같은 모양이어야 낯설지 않다 */
+  it("뒷부분을 같은 줄에 작게 새긴다", () => {
+    const { calls } = fakeCanvas(1600, 900);
+    stampCanvas({ width: 1600, height: 900 } as HTMLCanvasElement, undefined, SUM);
+    const head = drawn(calls, SUM.line)!;
+    const rest = drawn(calls, ` ${SUM.rest}`)!;
+    expect(rest).not.toBeNull();
+    // 같은 줄 — 밑선을 맞추므로 y 는 다르지만 한 줄 안에 든다
+    expect(Math.abs(rest.y - head.y)).toBeLessThan(head.size);
+    expect(rest.size).toBeLessThan(head.size);
+    // 앞부분보다 오른쪽에서 시작한다
+    expect(rest.x).toBeGreaterThan(head.x);
+  });
+
+  it("요약이 없으면 상자도 글자도 넣지 않는다", () => {
+    const { calls } = fakeCanvas();
+    stampCanvas(src);
+    expect(calls).not.toContain("boxfill");
+    expect(calls.filter((c) => c.startsWith("fill:"))).toHaveLength(1);
+  });
+
+  /* 사용자 문구와 함께 와도 서로 자리를 뺏지 않는다 */
+  it("사용자 문구는 위, 요약은 아래에 나뉘어 들어간다", () => {
+    const { calls } = fakeCanvas(1200, 800);
+    stampCanvas(src, "나의 기록", SUM);
+    expect(drawn(calls, "나의 기록")!.y).toBeLessThan(drawn(calls, SUM.line)!.y);
+  });
+
+  /*
+   * 긴 문장이라 좁은 그림에서는 넘친다.
+   *
+   * stampCanvas 가 out.width = source.width 로 덮어쓰므로, 폭은
+   * fakeCanvas 가 아니라 source 쪽을 바꿔야 실제로 달라진다.
+   */
+  it("상자 안쪽 폭에 맞게 글자를 줄인다", () => {
+    const sized = (w: number, h: number) => ({ width: w, height: h }) as HTMLCanvasElement;
+
+    const wide = fakeCanvas(1600, 900);
+    stampCanvas(sized(1600, 900), undefined, SUM);
+    const big = drawn(wide.calls, SUM.line)!.size;
+
+    const narrow = fakeCanvas(500, 900);
+    stampCanvas(sized(500, 900), undefined, SUM);
+    expect(drawn(narrow.calls, SUM.line)!.size).toBeLessThan(big);
   });
 });

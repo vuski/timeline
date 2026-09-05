@@ -57,6 +57,7 @@ const data: TimelineData = {
   spanTo: "2015-06-01",
   totalVerts: 6,
   vertsByYear: { "2015": 6 },
+  moveSpans: [],
 };
 
 const setup = () => renderHook(() => useTimelineStore(data));

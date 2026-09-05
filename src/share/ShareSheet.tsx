@@ -3,7 +3,7 @@ import { useT } from "../i18n";
 import { track } from "../analytics";
 import {
   blockedByInsecureContext, canShareFiles, captureMap, copyLink, downloadImage, intentUrl,
-  shareImage, snapshotName, type IntentTarget,
+  shareImage, snapshotName, type IntentTarget, type StampSummary,
 } from "./capture";
 import "./ShareSheet.css";
 
@@ -14,6 +14,13 @@ interface CapturableMap {
 
 interface Props {
   getMap: () => CapturableMap | null;
+  /**
+   * 집계 요약 — 이미지 아래 주소 위에 함께 새긴다.
+   *
+   * 격자에 적힌 비율이 무엇에 대한 비율인지 밝히는 줄이라, 그 숫자를
+   * 담은 그림에는 같이 남아야 뜻이 산다.
+   */
+  summary?: StampSummary;
   onClose: () => void;
 }
 
@@ -88,7 +95,7 @@ const APPS: {
   { key: "instagram", icon: IconInstagram, cls: "insta" },
 ];
 
-export default function ShareSheet({ getMap, onClose }: Props) {
+export default function ShareSheet({ getMap, summary, onClose }: Props) {
   const { t } = useT();
   const [phase, setPhase] = useState<Phase>("capturing");
   const [blob, setBlob] = useState<Blob | null>(null);
@@ -110,7 +117,7 @@ export default function ShareSheet({ getMap, onClose }: Props) {
     }
     let url: string | null = null;
     let alive = true;
-    captureMap(map, applied)
+    captureMap(map, applied, summary)
       .then((b) => {
         if (!alive) return;
         setBlob(b);
@@ -125,7 +132,7 @@ export default function ShareSheet({ getMap, onClose }: Props) {
       alive = false;
       if (url) URL.revokeObjectURL(url);
     };
-  }, [getMap, applied]);
+  }, [getMap, applied, summary]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

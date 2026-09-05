@@ -148,6 +148,57 @@
   cursor: pointer;
 }
 
+/*
+ * 집계 요약 — 화면 아래, 폭의 90%.
+ *
+ * 재생 바와 같은 자리를 쓰지만 부딪히지 않는다. 재생 바는 시각화 모드
+ * 전용이고 시간 집계는 편집 모드 전용이라 함께 뜨는 일이 없다.
+ */
+.ws-tilesum {
+  position: absolute;
+  bottom: var(--sp-4);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-map-ui);
+  width: 90%;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-md);
+  background: var(--overlay-bg);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--overlay-border);
+  color: var(--overlay-text);
+  box-shadow: var(--shadow);
+  text-align: center;
+  /* 지도를 가리지 않게 — 상자 위로는 지도를 그대로 잡을 수 있다 */
+  pointer-events: none;
+}
+
+.ws-tilesum-line {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * 요약의 뒷부분 — 같은 줄에 이어 붙되 작게.
+ *
+ * 크기는 아래 안내 줄과 같지만 색은 본문 그대로다. 흐리게까지 하면
+ * 숫자가 곁다리로 보이는데, 이건 읽어야 하는 값이다.
+ */
+.ws-tilesum-rest {
+  font-size: var(--fs-xs);
+  font-weight: 400;
+}
+
+/* 오차 안내 — 본문보다 한 단 작고 흐리게 */
+.ws-tilesum-note {
+  margin: 2px 0 0;
+  font-size: var(--fs-xs);
+  color: var(--overlay-dim);
+  line-height: 1.35;
+}
+
 @media (hover: hover) {
   .ws-mode:hover {
     background: var(--overlay-bg);
