@@ -109,3 +109,50 @@
 .tip-hist-axis {
   fill: #1e3a8a;
 }
+
+/*
+ * 왼쪽 위 컨트롤 — 줌 상자가 들어갈 만큼 아래로 민다.
+ *
+ * 상자는 지도 위에 따로 앉히므로, 버튼 그룹이 그 아래에서 시작해야
+ * 겹치지 않는다. 10(여백) + 30(상자) + 8(간격) = 48px.
+ */
+.mapview .maplibregl-ctrl-top-left {
+  margin-top: 48px;
+}
+
+/*
+ * 줌 단계 — 확대 버튼 바로 위, 같은 폭(maplibre 버튼은 29px 정사각).
+ *
+ * 컨트롤과 같은 면으로 보이도록 흰 바탕에 같은 그림자를 쓴다.
+ */
+.mapzoom {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 29px;
+  padding: 3px 0 4px;
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 0 0 2px rgb(0 0 0 / 10%);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.mapzoom-cap {
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #71717a;
+}
+
+.mapzoom-val {
+  font-size: 13px;
+  font-weight: 700;
+  color: #18181b;
+}

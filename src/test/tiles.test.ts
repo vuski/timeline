@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   aggregateStays, displayZoom, formatShareExact, formatSpan, formatStayFull, formatStayLong,
   histogramSvg, HIST_BINS, HIST_W, latToTileY, lngToTileX, logScale, stayShare,
-  summarize, tilePolygon, tileXToLng, tileYToLat,
+  formatArea, summarize, tileAreaM2, tilePolygon, tileXToLng, tileYToLat, topTiles,
 } from "../data/tiles";
 import type { Visit } from "../types";
 
@@ -483,5 +483,111 @@ describe("formatShareExact", () => {
 
   it("분모가 없으면 빈 문자열", () => {
     expect(formatShareExact(60, 0)).toBe("");
+  });
+});
+
+describe("topTiles", () => {
+  const cell = (id: string, minutes: number) =>
+    ({ id, minutes }) as unknown as Parameters<typeof topTiles>[0][number];
+
+  const tiles = [cell("a", 10), cell("b", 500), cell("c", 50), cell("d", 3000), cell("e", 1)];
+
+  it("0 이면 전부 보여준다", () => {
+    expect(topTiles(tiles, 0)).toHaveLength(5);
+  });
+
+  it("오래 머문 순으로 n 개만 남긴다", () => {
+    expect(topTiles(tiles, 3).map((t) => t.id)).toEqual(["d", "b", "c"]);
+  });
+
+  it("칸이 n 보다 적으면 전부 남기되 순위는 매긴다", () => {
+    const out = topTiles(tiles, 10);
+    expect(out).toHaveLength(5);
+    expect(out.map((t) => t.rank)).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  /* 왼쪽 위에 쓸 번호 — 1 부터, 오래 머문 순 */
+  it("순위를 1 부터 매긴다", () => {
+    expect(topTiles(tiles, 3).map((t) => [t.id, t.rank])).toEqual([
+      ["d", 1],
+      ["b", 2],
+      ["c", 3],
+    ]);
+  });
+
+  /* 전체를 볼 때는 수백 칸에 번호를 붙여 봐야 읽히지 않는다 */
+  it("전체를 볼 때는 순위를 매기지 않는다", () => {
+    expect(topTiles(tiles, 0).every((t) => t.rank === undefined)).toBe(true);
+  });
+
+  /*
+   * tiles 는 useMemo 가 들고 있는 값이다. 제자리 정렬하면 다음 렌더에서
+   * 순서가 뒤바뀌어, 라벨과 색이 엉뚱한 칸에 붙는다.
+   */
+  it("원본 배열을 건드리지 않는다", () => {
+    const before = tiles.map((t) => t.id);
+    topTiles(tiles, 3);
+    expect(tiles.map((t) => t.id)).toEqual(before);
+  });
+
+  it("빈 배열도 안전하다", () => {
+    expect(topTiles([], 5)).toEqual([]);
+  });
+});
+
+describe("칸의 넓이", () => {
+  const u = { km2: "km²" };
+
+  /*
+   * 웹 메르카토르 칸은 화면에서만 정사각형이다. 땅 위에서는 적도가 가장
+   * 넓고 극으로 갈수록 좁아진다 — 이걸 무시하면 서울 칸이 21% 크게 나온다.
+   */
+  it("위도가 높을수록 좁다 — cos² 만큼", () => {
+    const z = 12;
+    const equator = tileAreaM2(latToTileY(0, z), z);
+    const seoul = tileAreaM2(Math.floor(latToTileY(37.5, z)), z);
+    expect(seoul).toBeLessThan(equator);
+    /*
+     * 메르카토르는 가로·세로 양쪽이 같은 비로 늘어나므로 넓이는 cos 의
+     * 제곱만큼 줄어든다 — cos(37.5)=0.79 가 아니라 0.63 이다.
+     * 서울 칸은 60㎢, 적도 칸은 96㎢.
+     */
+    expect(seoul / equator).toBeCloseTo(Math.cos((37.5 * Math.PI) / 180) ** 2, 2);
+  });
+
+  /* 줌이 한 단계 잘아지면 넓이는 넷으로 나뉜다 */
+  it("줌 한 단계마다 넷으로 나뉜다", () => {
+    const big = tileAreaM2(Math.floor(latToTileY(37.5, 10)), 10);
+    const small = tileAreaM2(Math.floor(latToTileY(37.5, 11)), 11);
+    expect(big / small).toBeCloseTo(4, 0);
+  });
+
+  /* 지구 전체를 한 칸으로 덮는 줌 0 — 지구 표면적과 맞아야 한다 */
+  it("줌 0 은 지구 표면적에 가깝다", () => {
+    // 메르카토르는 극지방을 잘라내므로 전체보다 조금 작다
+    const earth = 5.1e14;
+    expect(tileAreaM2(0, 0)).toBeGreaterThan(earth * 0.9);
+    expect(tileAreaM2(0, 0)).toBeLessThan(earth);
+  });
+
+  /*
+   * 단위를 바꾸지 않는다. 가장 잘게 본 줌에서 941,499m² 가 튀어나오면
+   * 앞 단계의 4km² 와 견줄 수 없다 — 자릿수만 보고 더 넓다고 읽힌다.
+   */
+  it("언제나 ㎢ 로 쓴다", () => {
+    expect(formatArea(2_500_000, u)).toBe("3km²");
+    expect(formatArea(941_499, u)).toBe("0.9km²");
+    expect(formatArea(15_564_000_000, u)).toBe("15,564km²");
+  });
+
+  /* 1㎢ 이상은 정수, 그 아래만 소수점 한 자리 */
+  it("1㎢ 를 넘으면 정수로 쓴다", () => {
+    expect(formatArea(1_234_567, u)).toBe("1km²");
+    expect(formatArea(4_000_000, u)).toBe("4km²");
+  });
+
+  it("아주 좁아도 0.0 이 되지 않는다", () => {
+    expect(formatArea(0.2, u)).toBe("0.1km²");
+    expect(formatArea(10_000, u)).toBe("0.1km²");
   });
 });

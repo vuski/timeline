@@ -3,14 +3,15 @@ import type { Layer } from "@deck.gl/core";
 import type { Map as MLMap } from "maplibre-gl";
 import MapView from "../map/MapView";
 import {
-  ArrowToggle, ColorControl, LabelToggle, WidthControl, ZAxisSlider,
+  ArrowToggle, ColorControl, LabelToggle, TileTopToggle, WidthControl, ZAxisSlider,
 } from "../map/MapWidgets";
 import { zMetersPerSecond, zSpanMeters } from "../map/zscale";
 import { LABEL_MAX, buildLayers, labelTargets } from "../map/layers";
 import { trackTimeRange } from "../data/rows";
 import {
   aggregateStays, displayZoom, formatShareExact, formatSpan, formatStayFull,
-  formatStayLong, histogramSvg, summarize, type TileStay,
+  formatArea, formatStayLong, histogramSvg, summarize, tileAreaM2, topTiles,
+  type TileStay,
 } from "../data/tiles";
 import { formatAt, offsetLabel } from "../data/timezone";
 import { anchorsOf } from "../data/connect";
@@ -352,9 +353,20 @@ export default function Workspace({ data, onReload }: Props) {
    */
   const tileZoom = displayZoom(mapZoom);
 
-  const tiles = useMemo(
+  const allTiles = useMemo(
     () => (tileStay ? aggregateStays(visibleVisits, tileZoom) : undefined),
     [tileStay, visibleVisits, tileZoom],
+  );
+
+  /*
+   * 상위 N 만 보기 — 자르는 것은 집계 뒤다.
+   *
+   * 요약 줄과 칸의 비율은 전체 기간이 분모이므로, 몇 개만 보여준다고
+   * 숫자가 달라지지는 않는다. 보이는 칸만 줄어든다.
+   */
+  const tiles = useMemo(
+    () => (allTiles ? topTiles(allTiles, store.tileTop) : undefined),
+    [allTiles, store.tileTop],
   );
 
 
@@ -412,6 +424,13 @@ export default function Workspace({ data, onReload }: Props) {
   const tileLabel = useCallback(
     (minutes: number) => formatStayLong(minutes, stayUnits),
     [stayUnits],
+  );
+
+  /* 칸의 넓이 — 위도에 따라 달라지므로 칸마다 잰다 */
+  const tileArea = useCallback(
+    (y: number, z: number) =>
+      formatArea(tileAreaM2(y, z), { km2: t("render.tileKm2") }),
+    [t],
   );
   /*
    * 칸에 마우스를 얹었을 때 — 뭉뚱그린 라벨 대신 원본 수치와,
@@ -486,6 +505,7 @@ export default function Workspace({ data, onReload }: Props) {
       showArrows,
       tiles,
       tileLabel,
+      tileArea,
       // 칸의 비율과 요약 줄이 같은 분모를 쓰게 한다
       tileTotalMinutes: staySummary?.totalMinutes,
     });
@@ -494,7 +514,7 @@ export default function Workspace({ data, onReload }: Props) {
   }, [
     visibleVisits, visibleTracks, renderMode, glowStyle, selectedIds,
     playback.timeFiltered, playback.trailMs, span.startMs, playback.timeRef,
-    zPerSec, showArrows, tiles, tileLabel, staySummary,
+    zPerSec, showArrows, tiles, tileLabel, tileArea, staySummary,
   ]);
 
   /** 목록에서 고른 것으로 지도를 옮긴다 — 한 점이면 확대, 여러 개면 맞춤 */
@@ -645,6 +665,7 @@ ${formatAt(d.startMs, d.offsetMin)} ${offsetLabel(d.offsetMin)}`
           onPick={renderMode || selecting || tileStay ? undefined : onPick}
           getTooltip={renderMode || tileStay ? undefined : getTooltip}
           getTooltipHtml={tileStay && !renderMode ? getTileTooltip : undefined}
+          zoomLevel={mapZoom}
           rectSelect={
             selecting ? { onDone: onRectDone, onCancel: () => setSelecting(false) } : undefined
           }
@@ -807,6 +828,11 @@ ${formatAt(d.startMs, d.offsetMin)} ${offsetLabel(d.offsetMin)}`
           {/* 배경 글자 — 두 모드 모두에서 쓴다. 궁적이 빽빽한 곳에서
               지명이 데이터를 가리면 끓다 */}
           <LabelToggle on={showLabels} onToggle={() => store.setShowLabels(!showLabels)} />
+
+          {/* 격자 개수 — 집계 중일 때만. 꺼져 있으면 고를 이유가 없다 */}
+          {tileStay && !renderMode && (
+            <TileTopToggle value={store.tileTop} onValue={store.setTileTop} />
+          )}
         </div>
 
         {/* z축(시간 높이) — 오른쪽에 세로로 세운다 */}

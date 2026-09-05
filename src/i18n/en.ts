@@ -124,6 +124,10 @@ export const en: Dict = {
     zAxisOff: "Z",
     labels: "Map labels",
     tileStay: "Stay totals",
+    tileTopAll: "All tiles",
+    tileTopN: "Top {n}",
+    tileTopGroup: "Tiles shown",
+    tileTopAllShort: "ALL",
     tileSummary: "Of {total}: {stay} ({stayPct}%) staying,",
     tileSummaryRest: "{other} ({otherPct}%) other incl. travel",
     tileSummaryNote:
@@ -132,6 +136,7 @@ export const en: Dict = {
     tileDay: "d",
     tileMonth: "mo",
     tileYear: "y",
+    tileKm2: "km²",
     arrows: "Direction",
   },
   play: {

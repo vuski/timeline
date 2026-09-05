@@ -352,10 +352,20 @@
     grid-column: 1;
     grid-row: 2;
     border-right: none;
-    border-top: 1px solid var(--border);
+    /*
+     * 지도와 시트의 경계 — 가장 가는 선으로, 다만 충분히 어둡게.
+     * --border 는 밝은 회색이라 지도 위에서 경계가 사라진다.
+     */
+    border-top: 1px solid var(--text-dim);
     /* 기본 높이 — 손잡이를 끌면 인라인 height 가 이걸 덮는다 */
     max-height: 45vh;
-    border-radius: var(--r-lg) var(--r-lg) 0 0;
+    /* 시트답게 위쪽만 크게 둥글린다 */
+    border-radius: 18px 18px 0 0;
+    /*
+     * 위로 드리우는 그림자 — 시트가 지도에서 떠 있다는 것을 알린다.
+     * 경계선만으로는 어디까지가 지도인지 눈이 잡지 못한다.
+     */
+    box-shadow: 0 -6px 20px rgb(0 0 0 / 18%);
     transition: height var(--t-med), max-height var(--t-med);
   }
 
@@ -446,7 +456,7 @@
     padding: 0;
     background: none;
     border: none;
-    border-radius: var(--r-lg) var(--r-lg) 0 0;
+    border-radius: 18px 18px 0 0;
     /* 수직 드래그를 직접 받는다 — 브라우저 스크롤로 샐지 않게 */
     touch-action: none;
     cursor: grab;
@@ -454,11 +464,15 @@
 
   .ws-grip:active { cursor: grabbing; }
 
+  /*
+   * 손잡이 막대 — border-strong(#d4d4d8)은 흰 시트 위에서 거의 보이지
+   * 않았다. 잡는 자리라는 표시이므로 눈에 들어와야 한다.
+   */
   .ws-grip-bar {
-    width: 36px;
-    height: 4px;
+    width: 40px;
+    height: 5px;
     border-radius: var(--r-full);
-    background: var(--border-strong);
+    background: var(--text-dim);
   }
 }
 

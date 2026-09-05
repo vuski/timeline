@@ -156,3 +156,29 @@
 @media (max-width: 768px) {
   .zaxis-slider { height: 120px; }
 }
+
+/*
+ * 격자 개수 — T 버튼 아래로 세로로 쌓는다.
+ *
+ * .mw 는 가로줄용이라 justify-content 로 오른쪽에 붙였는데, 세로로
+ * 세우면 그 축이 뒤바뀌어 정렬이 풀린다. align-items 로 다시 잡아야
+ * T 버튼과 오른쪽 끝이 맞는다.
+ */
+.mw-col {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  /* T 버튼과 한 덩어리로 보이지 않게 조금 띄운다 */
+  margin-top: 10px;
+}
+
+/*
+ * 아이콘이 아니라 글자가 들어가는 칸. 34px 안에 "ALL" 까지 담아야 하므로
+ * 작고 굵게 쓰고, 자간을 좁힌다.
+ */
+.mw-btn-text {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}

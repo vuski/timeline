@@ -136,6 +136,10 @@ export const ko = {
     zAxisOff: "z축",
     labels: "배경 글자",
     tileStay: "시간 집계",
+    tileTopAll: "전체 격자",
+    tileTopN: "상위 {n}위",
+    tileTopGroup: "격자 표시 개수",
+    tileTopAllShort: "ALL",
     /* 앞은 굵게, 뒤는 작게 — 한 줄에 이어 붙는다 */
     tileSummary: "총 {total} 중 체류 {stay}({stayPct}%)",
     tileSummaryRest: "기타 {other}({otherPct}%, 이동 포함)",
@@ -145,6 +149,7 @@ export const ko = {
     tileDay: "일",
     tileMonth: "개월",
     tileYear: "년",
+    tileKm2: "km²",
     arrows: "방향 표시",
   },
   play: {

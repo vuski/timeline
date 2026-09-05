@@ -31,6 +31,8 @@ interface Props {
    * 사용자 입력은 섞이지 않는다(집계 수치와 막대뿐).
    */
   getTooltipHtml?: (o: unknown) => string | null;
+  /** 지금 줌 — 왼쪽 위 확대 버튼 위에 적는다. 없으면 그리지 않는다 */
+  zoomLevel?: number;
   /** 로드 직후 맞출 범위 [[minLng,minLat],[maxLng,maxLat]] — 없으면 기본 시점 */
   fitTo?: [[number, number], [number, number]] | null;
   /**
@@ -59,7 +61,8 @@ const TINY_DRAG_PX = 4;
 const TINY_DRAG_TOUCH_PX = 12;
 
 export default function MapView({
-  layers, dark, rectSelect, onMapReady, onPick, getTooltip, getTooltipHtml, fitTo, zAxis = 0,
+  layers, dark, rectSelect, onMapReady, onPick, getTooltip, getTooltipHtml, zoomLevel,
+  fitTo, zAxis = 0,
   showLabels = true,
 }: Props) {
   const mapRef = useRef<MapRef>(null);
@@ -291,6 +294,25 @@ export default function MapView({
          * 기본 지도 위젯. 나침반까지 켜서 z축을 쌓았을 때 시야를 기울이고
          * 되돌릴 수 있게 한다(끌어서 회전, 클릭으로 북향 복귀).
          */}
+        {/*
+         * 줌 단계 — 확대 버튼 바로 위. 격자 크기가 줌에 딸려 정해지므로
+         * (displayZoom) 지금 몇 단계인지 보이는 편이 낫다.
+         *
+         * 컨트롤 스택 안에 끼워 넣어 봤지만 자리를 잡지 못했다 —
+         * .maplibregl-ctrl-top-left 는 absolute 로 배치되는데 그것을 덮으면
+         * 지도 밖으로 밀려난다. 그래서 지도 위에 직접 앉히고 폭만 맞춘다.
+         */}
+        {zoomLevel !== undefined && (
+          <div className="mapzoom">
+            <span className="mapzoom-cap">zoom</span>
+            {/*
+             * round 가 아니라 floor 다 — 격자 줌(displayZoom)이 floor 를
+             * 쓰기 때문이다. round 로 두면 줌 8.5 에서 숫자는 9 가 되는데
+             * 격자는 9.0 이 되어야 바뀌어, 둘이 0.5 만큼 어긋난다.
+             */}
+            <span className="mapzoom-val">{Math.floor(zoomLevel)}</span>
+          </div>
+        )}
         <NavigationControl position="top-left" visualizePitch showCompass />
         <GeolocateControl position="top-left" />
         <FullscreenControl position="top-left" />

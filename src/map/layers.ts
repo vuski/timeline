@@ -46,6 +46,8 @@ export interface LayerInput {
   tiles?: TileStay[];
   /** 칸 위에 쓸 글자 — 집계된 분을 사람이 읽는 말로 */
   tileLabel?: (minutes: number) => string;
+  /** 칸의 넓이 — 왼쪽 아래에 작게 */
+  tileArea?: (y: number, z: number) => string;
   /**
    * 비율의 분모 — 첫 기록부터 마지막 기록까지의 전체 시간(분).
    *
@@ -230,7 +232,7 @@ export function buildLayers(input: LayerInput): Layer[] {
  * 볼 때 온 칸이 투명해진다.
  */
 function tileLayers(input: LayerInput, tiles: TileStay[]): Layer[] {
-  const { tileLabel, tileTotalMinutes } = input;
+  const { tileLabel, tileArea, tileTotalMinutes } = input;
   /*
    * 비율의 분모는 전체 기간이다 — 화면에 분모가 적히지 않으니 보는 사람은
    * 당연히 "전체 중 몇 %" 로 읽는다. 그래서 칸들의 합은 100% 에 못 미치고,
@@ -302,6 +304,85 @@ function tileLayers(input: LayerInput, tiles: TileStay[]): Layer[] {
      * 비율은 따로 레이어로 — 같은 레이어에서 줄바꿈하면 두 줄이 크기와
      * 굵기를 공유해야 한다. 위는 크게, 아래는 작게 두려면 나눠야 한다.
      */
+    /*
+     * 순위 — 칸 왼쪽 위 모서리. 상위 N 을 골랐을 때만 매겨진다.
+     *
+     * 가운데의 시간·비율과 자리를 다투지 않게 모서리로 뺐다. polygon[3] 이
+     * 북서쪽 꼭짓점이다(tilePolygon: [남서, 남동, 북동, 북서]).
+     */
+    new TextLayer<TileStay>({
+      id: "tile-ranks",
+      data: tiles,
+      getPosition: (d) => d.polygon[3],
+      getText: (d) => (d.rank ? String(d.rank) : ""),
+      getSize: 15,
+      sizeUnits: "pixels",
+      characterSet: "auto",
+      fontFamily: '"Pretendard Variable", Pretendard, system-ui, sans-serif',
+      fontSettings: { fontSize: 64 },
+      fontWeight: 700,
+      getColor: [30, 58, 138, 255],
+      // 꼭짓점에 딱 붙이지 않고 칸 안쪽으로 들인다
+      getTextAnchor: "start",
+      getAlignmentBaseline: "top",
+      getPixelOffset: [4, 3],
+      pickable: false,
+      updateTriggers: { getText: [tiles] },
+    }),
+    /*
+     * 넓이 — 칸 왼쪽 아래 모서리. polygon[0] 이 남서쪽 꼭짓점이다
+     * (tilePolygon: [남서, 남동, 북동, 북서]).
+     *
+     * 순위(왼쪽 위)와 대각으로 갈라 가운데 숫자와 겹치지 않게 했다.
+     * 가는 글씨로 옅게 — 늘 보고 있을 값은 아니고, 칸이 얼마만한지
+     * 궁금할 때 눈에 들어오면 된다.
+     */
+    new TextLayer<TileStay>({
+      id: "tile-areas",
+      data: tiles,
+      getPosition: (d) => d.polygon[0],
+      getText: (d) => (tileArea ? tileArea(d.y, d.z) : ""),
+      getSize: 10,
+      sizeUnits: "pixels",
+      characterSet: "auto",
+      /*
+       * 가는 검은 글씨.
+       *
+       * 흰 글씨에 외곽선을 둘러 봤지만, 10px 작은 글씨에는 외곽선이
+       * 뭉개져 오히려 읽기 나빴다. 같은 칸의 시간·비율이 검은 글씨로
+       * 잘 읽히므로(칸 알파 상한이 220이라 묻히지 않는다) 같은 길을
+       * 따른다. 굵기만 낮춰 가운데 숫자에 앞서지 않게 한다.
+       *
+       * ── fontFamily 를 다른 레이어와 다르게 적는 이유 ──
+       *
+       * deck.gl 은 (fontFamily + fontSettings) 를 키로 글리프 아틀라스를
+       * 캐시한다. fontWeight 는 그 키에 들어가지 않으므로, 같은 조합을
+       * 쓰는 700 짜리 레이어가 먼저 아틀라스를 구우면 이 레이어는 그것을
+       * 그대로 물려받아 굵기가 먹지 않는다. 실제로 100 을 줬는데 화면에는
+       * 700 으로 나왔다.
+       *
+       * 폰트 자체는 같고 대체 목록만 한 단계 짧다 — 키를 갈라 별도
+       * 아틀라스를 굽게 하려는 것뿐이다.
+       */
+      fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
+      /*
+       * 다른 레이어(64)보다 크게 굽는다.
+       *
+       * 아틀라스를 64px 로 구워 10px 로 줄이면 6.4 배 축소다. 가는 획은
+       * 그 과정에서 1px 아래로 내려가 회색으로 뭉개진다 — 굵기를 낮추자
+       * 글씨가 흐려진 것이 이 때문이었다. 크게 구워 축소 배율을 낮추면
+       * 가늘면서도 획이 또렷하게 남는다.
+       */
+      fontSettings: { fontSize: 96 },
+      // 300 아래로는 10px 크기에서 획이 살아남지 못한다
+      fontWeight: 300,
+      getColor: [0, 0, 0],
+      getTextAnchor: "start",
+      getAlignmentBaseline: "bottom",
+      getPixelOffset: [4, -3],
+      pickable: false,
+      updateTriggers: { getText: [tileArea] },
+    }),
     new TextLayer<TileStay>({
       id: "tile-shares",
       data: tiles,

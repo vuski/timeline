@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import type { TimelineData, Track, Visit } from "../types";
 import { filterByRange, type Range } from "../data/range";
+import type { TileTopN } from "../data/tiles";
 import {
   budgetLimit, countVerts, grade as gradeOf, simplify, type Grade,
 } from "../data/budget";
@@ -65,6 +66,11 @@ export function useTimelineStore(data: TimelineData) {
   const [showLabels, setShowLabels] = useState(true);
   // 체류 집계 — 켜면 점·궁적을 잠시 내리고 타일별 체류시간을 덮는다
   const [tileStay, setTileStay] = useState(false);
+  /*
+   * 격자를 몇 개만 볼지 — 0 은 전체 (data/tiles.ts topTiles).
+   * 기본 5 위(사용자 지정). 전체를 켜면 칸이 빽빽해 읽기 어렵다.
+   */
+  const [tileTop, setTileTop] = useState<TileTopN>(5);
 
   /*
    * 모드를 바꿀 때 집계를 끈다 — 집계는 편집 전용이라 시각화에서는
@@ -201,6 +207,7 @@ export function useTimelineStore(data: TimelineData) {
     showArrows, setShowArrows,
     showLabels, setShowLabels,
     tileStay, setTileStay,
+    tileTop, setTileTop,
     glowStyle, setGlowStyle,
     visibleVisits, visibleTracks,
     verts, grade, limit, span,

@@ -32,7 +32,19 @@ html, body {
   inset: 0;
 }
 
+/*
+ * UI 글자는 끌어도 잡히지 않게 한다.
+ *
+ * 지도를 끌거나 히스토그램에서 구간을 고를 때 버튼·라벨이 파랗게
+ * 선택되면 화면이 지저분해지고, 모바일에서는 그 선택 때문에 복사 메뉴가
+ * 뜨기도 한다. 앱은 문서가 아니라 도구다.
+ *
+ * 다만 사용자가 실제로 집어 갈 만한 곳은 남긴다 — 입력칸과 목록의
+ * 날짜·장소는 복사해 쓸 수 있어야 한다.
+ */
 body {
+  user-select: none;
+  -webkit-user-select: none;
   background: var(--bg);
   color: var(--text);
   font-family: var(--font);
@@ -153,4 +165,15 @@ h1, h2, h3 { font-weight: 600; }
 /* 모서리(가로·세로가 만나는 칸)도 배경에 맞춘다 */
 ::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+/* 복사해 쓸 수 있어야 하는 곳만 되살린다 */
+input,
+textarea,
+.tracklist,
+.ws-tilesum,
+.howto-body,
+.map-tip {
+  user-select: text;
+  -webkit-user-select: text;
 }

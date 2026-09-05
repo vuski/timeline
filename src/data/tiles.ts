@@ -27,6 +27,13 @@ export interface TileStay {
   /** 라벨을 놓을 자리 — 칸 한가운데 */
   center: [number, number];
   /**
+   * 오래 머문 순위(1부터). 상위 N 만 볼 때만 매긴다.
+   *
+   * 전체를 보는 동안에는 없다 — 수백 칸에 번호를 붙여 봐야 읽히지 않고,
+   * 몇 위인지가 궁금해지는 것은 몇 개만 골라 놓았을 때다.
+   */
+  rank?: number;
+  /**
    * 언제 머물렀나 — 전체 기간을 HIST_BINS 칸으로 쪼갠 분 단위 누적.
    *
    * 방문 목록을 그대로 들고 있으면 칸마다 수천 개가 쌓인다(실측 18,364
@@ -490,4 +497,72 @@ export function histogramSvg(hist: number[]): string {
   const axis = `<rect class="tip-hist-axis" x="0" y="${HIST_H}" width="${HIST_W}" height="${HIST_AXIS_H}"/>`;
   const h = HIST_H + HIST_AXIS_H;
   return `<svg class="tip-hist" width="${HIST_W}" height="${h}" viewBox="0 0 ${HIST_W} ${h}">${bars}${axis}</svg>`;
+}
+
+/* ── 상위 N 만 보기 ────────────────────────────────────────────────── */
+
+/** 보여줄 칸 수 — 0 은 전체 */
+export type TileTopN = 0 | 3 | 5 | 10;
+
+export const TILE_TOP_CHOICES: TileTopN[] = [0, 3, 5, 10];
+
+/**
+ * 오래 머문 순으로 상위 n 칸만 남긴다. n 이 0 이면 전부.
+ *
+ * 줌 단계마다 다시 집계되므로, 이 함수도 그 단계의 칸들 안에서 고른다 —
+ * "동네를 보면 그 동네의 1~5위" 가 된다. 전국 상위 5개를 확대해도 계속
+ * 들고 다니는 것이 아니다.
+ *
+ * 원본 배열은 건드리지 않는다. tiles 는 useMemo 가 들고 있는 값이라
+ * 제자리 정렬하면 다음 렌더에서 순서가 뒤바뀐다.
+ */
+export function topTiles(tiles: TileStay[], n: TileTopN): TileStay[] {
+  if (n <= 0) return tiles;
+  return [...tiles]
+    .sort((a, b) => b.minutes - a.minutes)
+    .slice(0, n)
+    .map((t, i) => ({ ...t, rank: i + 1 }));
+}
+
+/* ── 칸의 넓이 ─────────────────────────────────────────────────────── */
+
+/** 지구 반지름(m) — 구로 친다. 표시용 어림이라 타원체까지 가지 않는다 */
+const EARTH_R = 6_378_137;
+
+/**
+ * 칸의 넓이(㎡).
+ *
+ * 웹 메르카토르 칸은 화면에서 정사각형이지만 땅 위에서는 그렇지 않다.
+ * 같은 줌이라도 적도의 칸이 가장 넓고 극으로 갈수록 좁아진다 — 서울(위도
+ * 37.5)의 칸은 적도 칸의 약 79% 다. 그래서 위도를 넣어 구면에서 잰다.
+ *
+ * 위도 띠의 넓이는 sin 의 차로 정확히 나온다:
+ *   A = R² · Δλ · (sin φ₂ − sin φ₁)
+ */
+export function tileAreaM2(y: number, z: number): number {
+  const n = 2 ** z;
+  const north = (tileYToLat(y, z) * Math.PI) / 180;
+  const south = (tileYToLat(y + 1, z) * Math.PI) / 180;
+  const dLng = (2 * Math.PI) / n;
+  return EARTH_R * EARTH_R * dLng * Math.abs(Math.sin(north) - Math.sin(south));
+}
+
+export interface AreaUnits {
+  /** 제곱킬로미터 */
+  km2: string;
+}
+
+/**
+ * 넓이 — 언제나 ㎢ 로. "15,564km²", "0.9km²".
+ *
+ * 단위를 바꾸지 않는다. 가장 잘게 본 줌에서 941,499m² 가 튀어나오면
+ * 앞 단계의 4km² 와 견줄 수가 없다 — 자릿수만 보고 더 넓다고 읽힌다.
+ *
+ * 1㎢ 이상은 정수로(사용자 지정), 그 아래만 소수점 한 자리를 준다.
+ * 0.0 이 되지 않게 아주 좁으면 0.1 로 붙든다.
+ */
+export function formatArea(m2: number, u: AreaUnits): string {
+  const km2 = m2 / 1_000_000;
+  if (km2 >= 1) return `${Math.round(km2).toLocaleString()}${u.km2}`;
+  return `${Math.max(0.1, Math.round(km2 * 10) / 10).toFixed(1)}${u.km2}`;
 }

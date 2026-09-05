@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useT } from "../i18n";
 import type { GlowStyle } from "../state/useTimelineStore";
 import { Z_MAX_METERS } from "./zscale";
+import { TILE_TOP_CHOICES, type TileTopN } from "../data/tiles";
 import "./MapWidgets.css";
 
 type RGBA = [number, number, number, number];
@@ -190,6 +191,45 @@ export function ArrowToggle({ on, onToggle }: { on: boolean; onToggle: () => voi
       >
         <ArrowIcon />
       </button>
+    </div>
+  );
+}
+
+/**
+ * 격자를 몇 개만 볼지 — T 버튼 아래에 같은 폭으로 세로로 선다.
+ *
+ * 길게 눌러 여는 메뉴를 먼저 만들었다가 걷어냈다. 숨은 동작은 발견되지
+ * 않고, 버튼 하나에 "켜고 끄기" 와 "몇 개" 두 뜻을 얹는 것도 무리였다.
+ * 네 개가 늘 보이면 지금 무엇을 보고 있는지도 함께 읽힌다.
+ *
+ * 집계가 꺼져 있으면 고를 이유가 없으므로 아예 그리지 않는다.
+ */
+export function TileTopToggle({
+  value,
+  onValue,
+}: {
+  value: TileTopN;
+  onValue: (n: TileTopN) => void;
+}) {
+  const { t } = useT();
+  return (
+    <div className="mw mw-col" role="group" aria-label={t("render.tileTopGroup")}>
+      {TILE_TOP_CHOICES.map((n) => {
+        const label = n === 0 ? t("render.tileTopAll") : t("render.tileTopN").replace("{n}", String(n));
+        return (
+          <button
+            key={n}
+            className={value === n ? "mw-btn mw-btn-text on" : "mw-btn mw-btn-text"}
+            title={label}
+            aria-label={label}
+            aria-pressed={value === n}
+            onClick={() => onValue(n)}
+          >
+            {/* 34px 칸에 들어가야 한다 — "전체" 는 ALL, 나머지는 숫자만 */}
+            {n === 0 ? t("render.tileTopAllShort") : n}
+          </button>
+        );
+      })}
     </div>
   );
 }
