@@ -67,7 +67,7 @@ const MODE_UI: Record<PlayMode, { icon: string; key: "play.modeAuto" | "play.mod
 export default function PlayControls({ playback, baseSpeed, spanMs }: Props) {
   const { t, lang } = useT();
   const {
-    mode, cycleMode, running, timeFiltered, restart,
+    mode, cycleMode, timeFiltered, restart,
     speed, setSpeed, trailMs, setTrailMs, progress, seek, displayMs,
   } = playback;
 
@@ -136,8 +136,17 @@ export default function PlayControls({ playback, baseSpeed, spanMs }: Props) {
           max={SPEED_MAX_EXP}
           step={0.25}
           value={exp}
-          // 수동·전체 표시에서는 시각이 자동으로 흐르지 않는다
-          disabled={!running}
+          /*
+           * 잠그지 않는다.
+           *
+           * 처음에는 !running(자동 재생 중일 때만), 다음에는 !timeFiltered
+           * 로 두었는데 둘 다 틀렸다. timeFiltered 는 mode !== "all" 이고
+           * 기본 모드가 "all" 이라, 파일을 연 직후에는 여전히 잠겨 있었다.
+           *
+           * 속도와 꼬리는 "지금 흐르는 상태" 가 아니라 "재생하면 어떻게
+           * 흐를까" 라는 설정값이다. 어느 모드에서든 미리 맞출 수 있어야
+           * 한다.
+           */
           onChange={(e) => setSpeed(baseSpeed * 2 ** Number(e.target.value))}
           aria-label={t("play.speed")}
         />
@@ -153,7 +162,7 @@ export default function PlayControls({ playback, baseSpeed, spanMs }: Props) {
           max={1}
           step={0.005}
           value={trailPos}
-          disabled={!timeFiltered}
+          // 속도와 같다 — 재생 전에도 미리 맞출 수 있어야 한다
           onChange={(e) => setTrailMs(posToTrail(Number(e.target.value), spanMs))}
           aria-label={t("play.trail")}
         />
