@@ -20,20 +20,38 @@ export const SHARE_URL = "https://timeline.vw-lab.com";
  * 새김 글자 크기 — 이미지 높이에 비례한다. 큰 화면에서 캡쳐도 글자가
  * 화면에서 차지하는 비중이 같게 보이게 하려는 것이다.
  */
-const CAP_RATIO = 0.030;
+const CAP_RATIO = 0.03;
 const CAP_MIN = 13;
 const CAP_MAX = 30;
-const URL_RATIO = 0.022;
-const URL_MIN = 11;
-const URL_MAX = 22;
-/* 집계 요약 — 주소보다 조금 크게. 읽으라고 넣는 줄이다 */
-const SUM_RATIO = 0.026;
+/*
+ * 주소 — 요약보다 작아야 한다. 상한을 22 로 두면 세로로 긴 이미지에서
+ * 요약(17)을 넘어서 위계가 뒤집힌다.
+ */
+const URL_RATIO = 0.015;
+const URL_MIN = 10;
+const URL_MAX = 15;
+/*
+ * 집계 요약.
+ *
+ * 상한을 26 으로 두었더니 세로로 긴 이미지(907x1250)에서 상자 글자만
+ * 격자 글자(13px)의 두 배가 됐다 — 격자는 화면 배율(scale)을 그대로
+ * 따르는데 여기는 이미지 높이에 비례해 커지기 때문이다. 두 기준이
+ * 어긋나면 화면에서 보던 것과 다른 그림이 저장된다.
+ *
+ * 비율은 낮추고 상한을 격자 글자에 가깝게 내렸다.
+ */
+const SUM_RATIO = 0.016;
 const SUM_MIN = 12;
-const SUM_MAX = 26;
+const SUM_MAX = 17;
 
 const FONT = '"Pretendard Variable", Pretendard, system-ui, sans-serif';
 
-function sizeOf(ratio: number, min: number, max: number, height: number): number {
+function sizeOf(
+  ratio: number,
+  min: number,
+  max: number,
+  height: number,
+): number {
   return Math.min(max, Math.max(min, height * ratio));
 }
 
@@ -78,6 +96,178 @@ function fitSize(
  *
  * @param bottom 상자의 아래 끝
  */
+/**
+ * 집계 격자를 캡쳐 캔버스에 그린다.
+ *
+ * 격자는 SVG(map/TileOverlay)라 지도 캔버스에 담기지 않는다. 화면에서
+ * 보던 그림이 저장하면 사라지므로, 같은 좌표를 받아 여기서 다시 그린다.
+ *
+ * TileOverlay.css 와 값을 맞춰 둔다 — 한쪽만 고치면 화면과 저장본이
+ * 갈린다. 색·크기를 바꿀 일이 있으면 두 곳을 함께 본다.
+ */
+/*
+ * 격자 색 — map/TileOverlay.css 와 같은 값이어야 한다.
+ *
+ * SVG 를 읽을 수 없어 여기서 손으로 다시 칠하므로, 한쪽만 고치면 화면과
+ * 저장본의 색이 갈린다.
+ */
+const TILE_STROKE = "#0e0c8a";
+const TILE_RADIUS = 6;
+const TILE_INSET = 2;
+
+/** rgba(...) 문자열의 알파에 배수를 먹인다 — 그라데이션 양 끝을 만든다 */
+function shade(fill: string, mul: number): string {
+  const m = /rgba?\(([^)]+)\)/.exec(fill);
+  if (!m) return fill;
+  const [r, g, b, a = "1"] = m[1].split(",").map((v) => v.trim());
+  return `rgba(${r}, ${g}, ${b}, ${Math.min(0.92, Number(a) * mul).toFixed(3)})`;
+}
+
+/** 둥근 모서리로 경로를 그린다 — TileOverlay 의 roundedPath 와 같은 규칙 */
+function tracePath(
+  ctx: CanvasRenderingContext2D,
+  pts: [number, number][],
+  r: number,
+): void {
+  const n = pts.length;
+  const back = (i: number) => shortenTo(pts[i], pts[(i - 1 + n) % n], r);
+  const fwd = (i: number) => shortenTo(pts[i], pts[(i + 1) % n], r);
+
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const b = back(i);
+    const f = fwd(i);
+    if (i === 0) ctx.moveTo(b[0], b[1]);
+    else ctx.lineTo(b[0], b[1]);
+    ctx.quadraticCurveTo(pts[i][0], pts[i][1], f[0], f[1]);
+  }
+  ctx.closePath();
+}
+
+function shortenTo(
+  from: [number, number],
+  to: [number, number],
+  r: number,
+): [number, number] {
+  const dx = to[0] - from[0];
+  const dy = to[1] - from[1];
+  const len = Math.hypot(dx, dy);
+  if (len === 0) return from;
+  const t = Math.min(r, len / 2) / len;
+  return [from[0] + dx * t, from[1] + dy * t];
+}
+
+/** 사각형을 제 중심 쪽으로 d 만큼 줄인다 */
+function insetPoints(pts: [number, number][], d: number): [number, number][] {
+  const cx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
+  const cy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
+  return pts.map(([x, y]) => {
+    const dx = x - cx;
+    const dy = y - cy;
+    const len = Math.hypot(dx, dy);
+    if (len <= d) return [cx, cy] as [number, number];
+    const t = (len - d) / len;
+    return [cx + dx * t, cy + dy * t] as [number, number];
+  });
+}
+
+function drawTiles(
+  ctx: CanvasRenderingContext2D,
+  tiles: TileShot[],
+  scale: number,
+): void {
+  const px = (n: number) => n * scale;
+
+  for (const t of tiles) {
+    /*
+     * 화면과 같은 모양으로 — 안쪽으로 물러서고 모서리를 둥글린다.
+     * 값이 어긋나면 저장본만 다른 그림이 된다(TileOverlay 의 TILE_INSET,
+     * TILE_RADIUS 와 같아야 한다).
+     */
+    const pts = insetPoints(t.points, TILE_INSET).map(
+      ([x, y]) => [px(x), px(y)] as [number, number],
+    );
+    tracePath(ctx, pts, px(TILE_RADIUS));
+
+    /*
+     * 화면은 왼쪽 위가 밝고 오른쪽 아래가 어두운 그라데이션이다.
+     * 단색으로 칠하면 판판해 보이므로 같은 결을 만든다.
+     */
+    const xs = pts.map((p) => p[0]);
+    const ys = pts.map((p) => p[1]);
+    const grad = ctx.createLinearGradient(
+      Math.min(...xs),
+      Math.min(...ys),
+      Math.max(...xs),
+      Math.max(...ys),
+    );
+    grad.addColorStop(0, shade(t.fill, 0.78));
+    grad.addColorStop(1, shade(t.fill, 1.15));
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    ctx.strokeStyle = TILE_STROKE;
+    ctx.lineWidth = px(1);
+    ctx.stroke();
+  }
+
+  /*
+   * 글자는 칸을 다 칠한 뒤에 — 이웃 칸이 글자를 덮지 않게.
+   *
+   * ── 화면과 다른 길을 쓴다 ──
+   *
+   * 화면(TileOverlay.css)은 획(stroke)으로 음영을 낸다. 지도가 움직일
+   * 때마다 다시 그려야 해서 값싼 쪽을 골랐기 때문이다.
+   *
+   * 저장은 한 번만 그리므로 그 제약이 없다. 그래서 더 고운 그림자 쪽을
+   * 쓴다 — 획은 글자 안쪽을 파고들어 얇은 글씨의 모양을 갉아먹는다.
+   * CSS 주석에 남겨 둔 두 겹 그림자와 같은 값이다.
+   *
+   * 캔버스의 shadow* 는 한 번에 한 겹뿐이라, 겹을 바꿔 가며 두 번 그린다.
+   */
+  const SHADOWS: [string, number, number][] = [
+    // 넓게 퍼지는 파란 기운 — 옅은 칸에서 글자를 받쳐 준다
+    ["rgba(0,0,0, 0.95)", 1, 0],
+    // 가까운 검정 — 획을 또렷하게 한다
+    ["rgba(0, 0, 0, 0.95)", 1, 1],
+  ];
+
+  for (const t of tiles) {
+    for (const [color, blur, offsetY] of SHADOWS) {
+      ctx.shadowColor = color;
+      ctx.shadowBlur = px(blur);
+      ctx.shadowOffsetY = px(offsetY);
+
+      ctx.textAlign = "center";
+      ctx.textBaseline = "alphabetic";
+      ctx.fillStyle = "#fff";
+
+      ctx.font = `700 ${px(13)}px ${FONT}`;
+      ctx.fillText(t.label, px(t.cx), px(t.cy - 2));
+
+      ctx.font = `700 ${px(10)}px ${FONT}`;
+      ctx.fillText(t.share, px(t.cx), px(t.cy + 12));
+
+      ctx.textAlign = "left";
+      if (t.rank) {
+        ctx.font = `800 ${px(15)}px ${FONT}`;
+        ctx.fillText(t.rank, px(t.left + 5), px(t.top + 15));
+      }
+      if (t.area) {
+        // 화면과 같이 조금 옅게(TileOverlay.css 의 opacity: 0.85)
+        ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+        ctx.font = `300 ${px(10)}px ${FONT}`;
+        ctx.fillText(t.area, px(t.left + 5), px(t.bottom - 5));
+      }
+    }
+  }
+
+  // 그림자를 끄고 나간다 — 뒤에 그릴 요약 상자까지 번지면 안 된다
+  ctx.shadowColor = "transparent";
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
+}
+
 function drawSummaryBox(
   ctx: CanvasRenderingContext2D,
   summary: StampSummary,
@@ -115,7 +305,8 @@ function drawSummaryBox(
    * roundRect 는 비교적 늦게 들어온 API 다 — 없으면 각진 상자로 떨어진다.
    * 모서리가 각진 것보다 상자가 통째로 사라지는 편이 나쁘다.
    */
-  if (typeof ctx.roundRect === "function") ctx.roundRect(left, top, boxW, boxH, r);
+  if (typeof ctx.roundRect === "function")
+    ctx.roundRect(left, top, boxW, boxH, r);
   else ctx.rect(left, top, boxW, boxH);
   ctx.fillStyle = "rgba(255, 255, 255, 0.94)";
   ctx.fill();
@@ -144,7 +335,11 @@ function drawSummaryBox(
   if (summary.rest) {
     ctx.font = `400 ${restSize}px ${FONT}`;
     // 큰 글자의 밑선에 맞춘다 — 위쪽 정렬이면 작은 글자가 떠 보인다
-    ctx.fillText(` ${summary.rest}`, startX + headW, top + padY + (lineSize - restSize));
+    ctx.fillText(
+      ` ${summary.rest}`,
+      startX + headW,
+      top + padY + (lineSize - restSize),
+    );
   }
   ctx.textAlign = "center";
 
@@ -177,6 +372,24 @@ function drawLine(
  * 지도 캔버스는 WebGL 이라 2D 컨텍스트로 글자를 쓸 수 없다. 같은 크기의
  * 2D 캔버스에 옴겨 그리고 그쪽을 내보낸다(녹화의 record.ts 와 같은 방식).
  */
+/**
+ * 캡쳐에 함께 그릴 격자 한 칸 — 화면 좌표(CSS 픽셀).
+ * map/TileOverlay 의 tileFrames() 가 만든다.
+ */
+export interface TileShot {
+  points: [number, number][];
+  cx: number;
+  cy: number;
+  left: number;
+  top: number;
+  bottom: number;
+  fill: string;
+  label: string;
+  share: string;
+  rank: string;
+  area: string;
+}
+
 export interface StampSummary {
   /** 첫 줄 앞부분 — "총 12년 4개월 중 체류 …". 굵게 */
   line: string;
@@ -190,6 +403,7 @@ export function stampCanvas(
   source: HTMLCanvasElement,
   caption?: string,
   summary?: StampSummary,
+  tiles?: TileShot[],
 ): HTMLCanvasElement {
   const out = document.createElement("canvas");
   out.width = source.width;
@@ -199,6 +413,18 @@ export function stampCanvas(
   if (!ctx) return source;
 
   ctx.drawImage(source, 0, 0);
+
+  /*
+   * 격자는 SVG 라 지도 캔버스에 없다 — 여기서 다시 그린다.
+   *
+   * 좌표는 CSS 픽셀인데 캔버스는 기기 배율만큼 크다(레티나면 2배).
+   * 그 비를 곱해 줘야 자리가 맞는다.
+   */
+  if (tiles && tiles.length > 0) {
+    const scale = source.width / (source.clientWidth || source.width);
+    drawTiles(ctx, tiles, scale);
+  }
+
   const mid = out.width / 2;
   ctx.textAlign = "center";
 
@@ -240,12 +466,13 @@ export function captureMap(
   map: CapturableMap,
   caption?: string,
   summary?: StampSummary,
+  tiles?: TileShot[],
 ): Promise<Blob> {
   return new Promise((resolve, reject) => {
     // 다시 그리게 한 뒤 그 프레임에서 읽는다 — 지운 직후의 빈 버퍼를 읽지 않도록
     map.triggerRepaint();
     requestAnimationFrame(() => {
-      stampCanvas(map.getCanvas(), caption, summary).toBlob((blob) => {
+      stampCanvas(map.getCanvas(), caption, summary, tiles).toBlob((blob) => {
         if (blob) resolve(blob);
         else reject(new Error("capture-failed"));
       }, "image/png");
@@ -262,7 +489,8 @@ export function captureMap(
  */
 export function canShareFiles(files: File[]): boolean {
   const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
-  if (typeof nav?.share !== "function" || typeof nav?.canShare !== "function") return false;
+  if (typeof nav?.share !== "function" || typeof nav?.canShare !== "function")
+    return false;
   try {
     return nav.canShare({ files });
   } catch {
@@ -292,7 +520,10 @@ export function blockedByInsecureContext(): boolean {
  *          "unsupported" — 이 브라우저는 파일 공유를 못 한다. 부른 쪽이
  *          대체 길(웹 인텐트·저장)로 내려가야 한다.
  */
-export async function shareImage(blob: Blob, text: string): Promise<"shared" | "unsupported"> {
+export async function shareImage(
+  blob: Blob,
+  text: string,
+): Promise<"shared" | "unsupported"> {
   const file = new File([blob], "timeline.png", { type: "image/png" });
   if (!canShareFiles([file])) return "unsupported";
   try {

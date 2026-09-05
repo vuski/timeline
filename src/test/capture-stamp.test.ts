@@ -34,7 +34,13 @@ function fakeCanvas(width = 1200, height = 800) {
     drawImage: () => calls.push("draw"),
     save: () => {},
     restore: () => {},
-    beginPath: () => {},
+    beginPath: () => calls.push("path"),
+    moveTo: (x: number, y: number) => calls.push(`moveTo:${x}|${y}`),
+    lineTo: (x: number, y: number) => calls.push(`lineTo:${x}|${y}`),
+    closePath: () => {},
+    quadraticCurveTo: (_cx: number, _cy: number, x: number, y: number) =>
+      calls.push(`curveTo:${x}|${y}`),
+    createLinearGradient: () => ({ addColorStop: () => {} }),
     roundRect: (x: number, y: number, w: number, h: number) =>
       calls.push(`box:${x}|${y}|${w}|${h}`),
     rect: (x: number, y: number, w: number, h: number) =>
@@ -283,12 +289,93 @@ describe("stampCanvas 집계 요약", () => {
   it("상자 안쪽 폭에 맞게 글자를 줄인다", () => {
     const sized = (w: number, h: number) => ({ width: w, height: h }) as HTMLCanvasElement;
 
-    const wide = fakeCanvas(1600, 900);
-    stampCanvas(sized(1600, 900), undefined, SUM);
+    /*
+     * 높이를 크게 잡아 글자가 상한(17)까지 오른 상태에서 견준다.
+     * 낮은 높이에서는 시작 크기가 이미 작아 fitSize 의 하한(시작의 절반)에
+     * 먼저 걸려, 폭을 줄여도 더 내려가지 않는다.
+     */
+    const wide = fakeCanvas(2000, 1400);
+    stampCanvas(sized(2000, 1400), undefined, SUM);
     const big = drawn(wide.calls, SUM.line)!.size;
 
-    const narrow = fakeCanvas(500, 900);
-    stampCanvas(sized(500, 900), undefined, SUM);
+    const narrow = fakeCanvas(420, 1400);
+    stampCanvas(sized(420, 1400), undefined, SUM);
     expect(drawn(narrow.calls, SUM.line)!.size).toBeLessThan(big);
+  });
+});
+
+/*
+ * 격자는 SVG(map/TileOverlay)라 지도 캔버스에 담기지 않는다. 화면에서
+ * 보던 그림이 저장하면 사라지지 않게, 좌표를 받아 여기서 다시 그린다.
+ * 이 테스트가 그 다리를 지킨다.
+ */
+describe("stampCanvas 집계 격자", () => {
+  const tile = {
+    points: [
+      [10, 10],
+      [50, 10],
+      [50, 50],
+      [10, 50],
+    ] as [number, number][],
+    cx: 30,
+    cy: 30,
+    left: 10,
+    top: 10,
+    bottom: 50,
+    fill: "rgba(71, 107, 191, 0.5)",
+    label: "3개월",
+    share: "12.3%",
+    rank: "1",
+    area: "60km²",
+  };
+
+  /*
+   * 좌표를 콕 집어 견주지 않는다. 칸은 안쪽으로 물러서고(TILE_INSET)
+   * 모서리가 둥글어(TILE_RADIUS) 꼭짓점이 그대로 찍히지 않는다 — 값을
+   * 박아 두면 모양을 다듬을 때마다 테스트가 깨진다.
+   *
+   * 여기서 지킬 것은 "칸이 그려졌는가" 와 "제 자리에 있는가" 다.
+   */
+  it("칸을 둥근 경로로 그린다", () => {
+    const { calls } = fakeCanvas(1200, 800);
+    stampCanvas(src, undefined, undefined, [tile]);
+    expect(calls).toContain("path");
+    expect(calls.filter((c) => c.startsWith("curveTo:"))).toHaveLength(4);
+
+    // 모든 점이 원래 사각형(10~50) 안에 든다
+    const pts = calls
+      .filter((c) => /^(moveTo|lineTo|curveTo):/.test(c))
+      .map((c) => c.split(":")[1].split("|").map(Number));
+    expect(pts.length).toBeGreaterThan(0);
+    for (const [x, y] of pts) {
+      expect(x).toBeGreaterThanOrEqual(10);
+      expect(x).toBeLessThanOrEqual(50);
+      expect(y).toBeGreaterThanOrEqual(10);
+      expect(y).toBeLessThanOrEqual(50);
+    }
+  });
+
+  it("칸 위의 글자를 모두 그린다", () => {
+    const { calls } = fakeCanvas(1200, 800);
+    stampCanvas(src, undefined, undefined, [tile]);
+    for (const t of ["3개월", "12.3%", "1", "60km²"]) {
+      expect(drawn(calls, t), t).not.toBeNull();
+    }
+  });
+
+  /* 순위와 넓이는 왼쪽 모서리, 시간과 비율은 가운데 */
+  it("글자를 제자리에 놓는다", () => {
+    const { calls } = fakeCanvas(1200, 800);
+    stampCanvas(src, undefined, undefined, [tile]);
+    expect(drawn(calls, "3개월")!.x).toBe(30);
+    expect(drawn(calls, "1")!.x).toBe(15);
+    // 넓이는 아래, 순위는 위
+    expect(drawn(calls, "60km²")!.y).toBeGreaterThan(drawn(calls, "1")!.y);
+  });
+
+  it("격자가 없으면 아무것도 그리지 않는다", () => {
+    const { calls } = fakeCanvas(1200, 800);
+    stampCanvas(src);
+    expect(calls).not.toContain("path");
   });
 });

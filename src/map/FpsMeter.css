@@ -1,0 +1,28 @@
+/*
+ * FPS — 개발용. 오른쪽 아래 구석에 작게.
+ *
+ * 지도 조작을 가리지 않게 포인터를 흘려보낸다.
+ */
+.fpsmeter {
+  /*
+   * fixed 다 — absolute 면 지도 컨테이너 안에 갇혀, 그 위에 쌓인 패널이나
+   * 모달을 넘지 못한다. 화면 기준으로 띄워야 무엇을 켜 두든 보인다.
+   */
+  position: fixed;
+  right: 8px;
+  bottom: 8px;
+  /*
+   * 무엇보다 위에 — 모달(30)까지 넘긴다. 재는 도구가 가려지면 쓸모가
+   * 없고, 개발 중에만 나오므로 무엇을 덮어도 상관없다.
+   */
+  z-index: 999;
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: rgb(0 0 0 / 72%);
+  color: #4ade80;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  user-select: none;
+}

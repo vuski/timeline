@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Layer } from "@deck.gl/core";
 import type { Map as MLMap } from "maplibre-gl";
 import MapView from "../map/MapView";
+import { tileFrames } from "../map/TileOverlay";
 import {
   ArrowToggle, ColorControl, LabelToggle, TileTopToggle, WidthControl, ZAxisSlider,
 } from "../map/MapWidgets";
@@ -503,18 +504,19 @@ export default function Workspace({ data, onReload }: Props) {
       timeOrigin: span.startMs,
       zMetersPerSecond: zPerSec,
       showArrows,
-      tiles,
-      tileLabel,
-      tileArea,
-      // 칸의 비율과 요약 줄이 같은 분모를 쓰게 한다
-      tileTotalMinutes: staySummary?.totalMinutes,
+      /*
+       * 격자는 deck 이 아니라 SVG 가 그린다(map/TileOverlay).
+       * 다만 격자를 보는 동안 점·궤적을 숨기는 것은 여기서 정해야 하므로
+       * 켜짐 여부만 넘긴다.
+       */
+      tilesOn: Boolean(tiles && tiles.length > 0),
     });
     layersRef.current = built;
     return built;
   }, [
     visibleVisits, visibleTracks, renderMode, glowStyle, selectedIds,
     playback.timeFiltered, playback.trailMs, span.startMs, playback.timeRef,
-    zPerSec, showArrows, tiles, tileLabel, tileArea, staySummary,
+    zPerSec, showArrows, tiles,
   ]);
 
   /** 목록에서 고른 것으로 지도를 옮긴다 — 한 점이면 확대, 여러 개면 맞춤 */
@@ -647,15 +649,20 @@ ${formatAt(d.startMs, d.offsetMin)} ${offsetLabel(d.offsetMin)}`
              * 오므로, 확대하는 동안 격자는 이전 줌 크기로 남고 지도만 커진다
              * — 확대할수록 배율 차가 벌어져 격자가 어긋나 보였다.
              *
-             * 매 프레임 불리지만 displayZoom 이 정수 단위라 실제 재집계는
-             * 정수 경계를 넘을 때만 일어난다. 같은 값이면 setState 가
-             * 리렌더를 걸지 않으므로 그 사이는 비용이 없다.
+             * **정수만 담는다.** getZoom() 을 그대로 넣으면 12.13 → 12.14
+             * 처럼 매 프레임 값이 달라져 리렌더가 걸린다. 그러면 tiles·
+             * tileLabel 이 새 참조가 되고, 격자 오버레이의 이펙트가 리스너를
+             * 떼었다 다시 다는 일까지 초당 60 번 돈다 — 지도를 끄는 것이
+             * 눈에 띄게 무거웠다.
+             *
+             * 이 값은 격자 크기(displayZoom)와 왼쪽 위 표시에만 쓰이고 둘 다
+             * 정수 단위이므로, 소수점은 애초에 버려도 잃을 것이 없다.
              *
              * move 도 함께 듣는다 — flyTo(fitTo)처럼 프로그램이 옮기는 경우
              * zoom 이벤트 없이 끝나기도 한다.
              */
-            setMapZoom(m.getZoom());
-            const sync = () => setMapZoom(m.getZoom());
+            setMapZoom(Math.floor(m.getZoom()));
+            const sync = () => setMapZoom(Math.floor(m.getZoom()));
             m.on("zoom", sync);
             m.on("move", sync);
           }}
@@ -664,8 +671,18 @@ ${formatAt(d.startMs, d.offsetMin)} ${offsetLabel(d.offsetMin)}`
           // 집계 중에는 점·궁적이 없다 — 골라낼 것도 설명할 것도 없다
           onPick={renderMode || selecting || tileStay ? undefined : onPick}
           getTooltip={renderMode || tileStay ? undefined : getTooltip}
-          getTooltipHtml={tileStay && !renderMode ? getTileTooltip : undefined}
           zoomLevel={mapZoom}
+          tileOverlay={
+            tiles && tiles.length > 0 && staySummary
+              ? {
+                  tiles,
+                  total: staySummary.totalMinutes,
+                  label: tileLabel,
+                  area: tileArea,
+                  tooltip: getTileTooltip,
+                }
+              : undefined
+          }
           rectSelect={
             selecting ? { onDone: onRectDone, onCancel: () => setSelecting(false) } : undefined
           }
@@ -984,6 +1001,20 @@ ${formatAt(d.startMs, d.offsetMin)} ${offsetLabel(d.offsetMin)}`
           getMap={() => mapRef.current}
           // 집계 중일 때만 — 격자가 없으면 설명할 비율도 없다
           summary={tileStay ? summaryText : undefined}
+          /*
+           * 격자는 SVG 라 지도 캔버스에 담기지 않는다. 지금 화면의 좌표를
+           * 그대로 넘겨 캡쳐 쪽에서 다시 그리게 한다 — 여는 순간에 재므로
+           * 사용자가 보고 있던 그 자리다.
+           */
+          tiles={
+            tiles && tiles.length > 0 && staySummary && mapRef.current
+              ? tileFrames(mapRef.current, tiles, {
+                  total: staySummary.totalMinutes,
+                  label: tileLabel,
+                  area: tileArea,
+                })
+              : undefined
+          }
           onClose={() => setSharing(false)}
         />
       )}

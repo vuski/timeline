@@ -3,7 +3,7 @@ import { useT } from "../i18n";
 import { track } from "../analytics";
 import {
   blockedByInsecureContext, canShareFiles, captureMap, copyLink, downloadImage, intentUrl,
-  shareImage, snapshotName, type IntentTarget, type StampSummary,
+  shareImage, snapshotName, type IntentTarget, type StampSummary, type TileShot,
 } from "./capture";
 import "./ShareSheet.css";
 
@@ -21,6 +21,11 @@ interface Props {
    * 담은 그림에는 같이 남아야 뜻이 산다.
    */
   summary?: StampSummary;
+  /**
+   * 집계 격자 — SVG 라 지도 캔버스에 담기지 않는다.
+   * 화면에서 보던 그림이 저장하면 사라지지 않게 좌표를 받아 다시 그린다.
+   */
+  tiles?: TileShot[];
   onClose: () => void;
 }
 
@@ -95,7 +100,7 @@ const APPS: {
   { key: "instagram", icon: IconInstagram, cls: "insta" },
 ];
 
-export default function ShareSheet({ getMap, summary, onClose }: Props) {
+export default function ShareSheet({ getMap, summary, tiles, onClose }: Props) {
   const { t } = useT();
   const [phase, setPhase] = useState<Phase>("capturing");
   const [blob, setBlob] = useState<Blob | null>(null);
@@ -117,7 +122,7 @@ export default function ShareSheet({ getMap, summary, onClose }: Props) {
     }
     let url: string | null = null;
     let alive = true;
-    captureMap(map, applied, summary)
+    captureMap(map, applied, summary, tiles)
       .then((b) => {
         if (!alive) return;
         setBlob(b);
@@ -132,7 +137,7 @@ export default function ShareSheet({ getMap, summary, onClose }: Props) {
       alive = false;
       if (url) URL.revokeObjectURL(url);
     };
-  }, [getMap, applied, summary]);
+  }, [getMap, applied, summary, tiles]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

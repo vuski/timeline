@@ -1,4 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import TileOverlay from "./TileOverlay";
+import FpsMeter from "./FpsMeter";
+import type { TileStay } from "../data/tiles";
+import "./TileOverlay.css";
 import type { Map as MLMap } from "maplibre-gl";
 import Map, {
   FullscreenControl, GeolocateControl, NavigationControl, ScaleControl, type MapRef,
@@ -33,6 +37,19 @@ interface Props {
   getTooltipHtml?: (o: unknown) => string | null;
   /** 지금 줌 — 왼쪽 위 확대 버튼 위에 적는다. 없으면 그리지 않는다 */
   zoomLevel?: number;
+  /**
+   * 집계 격자 — SVG 로 지도 위에 그린다(TileOverlay).
+   *
+   * deck 레이어가 아니라 DOM 이다. 칸이 몇 개뿐이라 브라우저가 직접
+   * 글자를 그리는 편이 선명하고, 굵기·합자 문제도 없다.
+   */
+  tileOverlay?: {
+    tiles: TileStay[];
+    total: number;
+    label: (minutes: number) => string;
+    area: (y: number, z: number) => string;
+    tooltip?: (t: TileStay) => string | null;
+  };
   /** 로드 직후 맞출 범위 [[minLng,minLat],[maxLng,maxLat]] — 없으면 기본 시점 */
   fitTo?: [[number, number], [number, number]] | null;
   /**
@@ -62,10 +79,17 @@ const TINY_DRAG_TOUCH_PX = 12;
 
 export default function MapView({
   layers, dark, rectSelect, onMapReady, onPick, getTooltip, getTooltipHtml, zoomLevel,
-  fitTo, zAxis = 0,
+  tileOverlay, fitTo, zAxis = 0,
   showLabels = true,
 }: Props) {
   const mapRef = useRef<MapRef>(null);
+  /*
+   * SVG 오버레이에 넘길 지도 인스턴스.
+   *
+   * ref 로는 안 된다 — 렌더 중에 읽으면 첫 렌더에서 null 이고, 그 뒤에
+   * 채워져도 리렌더가 걸리지 않아 오버레이가 영영 그려지지 않는다.
+   */
+  const [mapInst, setMapInst] = useState<MLMap | null>(null);
   const fittedRef = useRef(false);
   const [rectPx, setRectPx] = useState<RectPx | null>(null);
   const rectRef = useRef(rectSelect);
@@ -254,6 +278,7 @@ export default function MapView({
         onLoad={(e) => {
           applyMapLanguage(e.target, preferredLanguage());
           applyMapLabels(e.target, labelsRef.current);
+          setMapInst(e.target);
           onMapReady?.(e.target);
         }}
         // 밝은/어두운 스타일을 갈아끼우면 레이어가 새로 오므로 다시 적용한다
@@ -294,6 +319,24 @@ export default function MapView({
          * 기본 지도 위젯. 나침반까지 켜서 z축을 쌓았을 때 시야를 기울이고
          * 되돌릴 수 있게 한다(끌어서 회전, 클릭으로 북향 복귀).
          */}
+        {/* 개발 중에만 — 무엇이 무거운지 재기 위해 */}
+        <FpsMeter />
+
+        {/*
+         * 집계 격자 — deck 레이어가 아니라 SVG 다. 지도 캔버스 위에 덮되
+         * 컨트롤보다는 아래에 둔다.
+         */}
+        {tileOverlay && (
+          <TileOverlay
+            map={mapInst}
+            tiles={tileOverlay.tiles}
+            total={tileOverlay.total}
+            label={tileOverlay.label}
+            area={tileOverlay.area}
+            tooltip={tileOverlay.tooltip}
+          />
+        )}
+
         {/*
          * 줌 단계 — 확대 버튼 바로 위. 격자 크기가 줌에 딸려 정해지므로
          * (displayZoom) 지금 몇 단계인지 보이는 편이 낫다.

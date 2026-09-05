@@ -1,0 +1,105 @@
+/*
+ * 집계 격자 — 지도 위에 덮는 SVG.
+ *
+ * 지도를 가리되 조작은 통과시킨다: 폴리곤만 이벤트를 받고(툴팁을 띄우려면
+ * 필요하다) 글자와 바탕은 흘려보낸다. 그래야 격자 위에서도 지도를 끌 수
+ * 있다.
+ */
+.tileovl {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/*
+ * SVG 는 포인터를 하나도 받지 않는다(.tileovl 의 pointer-events:none).
+ *
+ * 툴팁을 띄우려고 폴리곤에 auto 를 줬더니 휠과 드래그까지 삼켜, 격자
+ * 위에서는 지도를 확대할 수도 끌 수도 없었다. 지도가 먼저다 — 툴팁은
+ * 지도 컨테이너의 포인터 위치를 받아 어느 칸인지 좌표로 가린다.
+ */
+.tileovl-poly {
+  /*
+   * 테두리는 칸마다 같은 색이다.
+   *
+   * 반투명하게 두면 뒤의 칠이 비쳐, 진한 칸과 옅은 칸의 테두리가 서로
+   * 달라 보였다. 격자는 같은 규칙으로 그어진 선이므로 색도 굵기도
+   * 한결같아야 한다.
+   */
+  stroke: #0e0c8a;
+  stroke-width: 1;
+}
+
+.tileovl text {
+  pointer-events: none;
+  /* 글자는 브라우저가 직접 그린다 — 아틀라스도 축소도 없다 */
+  font-family: var(--font);
+  paint-order: stroke;
+}
+
+/*
+ * 칸 위의 글자 — 흰색에 어두운 남색 획.
+ *
+ * 칸 채도를 올리면서 검은 글씨가 진한 칸에서 묻혔다. 흰 글씨로 뒤집고,
+ * 옅은 칸(짧게 머문 곳)에서 배경에 날아가지 않게 뒤에 획을 깐다.
+ *
+ * ── 그림자와 획 사이 ──
+ *
+ * drop-shadow 는 글자마다 합성 레이어를 만들고 지도가 움직일 때마다
+ * 다시 계산한다. 획은 칠하기 한 번이 느는 것뿐이라 훨씬 싸다. 다만
+ * 획은 글자 안쪽까지 파고들어 모양을 갉아먹으므로, 얇은 글씨에서는
+ * 그림자가 더 곱다.
+ *
+ * FPS 미터(map/FpsMeter)로 재 보고 고르면 된다. 그림자 쪽은 아래에
+ * 남겨 두었다.
+ */
+.tileovl text {
+  fill: #fff;
+  stroke: rgb(10 20 30 / 60%);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+
+  /* 그림자 판 — 획 대신 쓰려면 위 세 줄을 지우고 이걸 살린다 */
+  /* filter: drop-shadow(0 1px 1px rgb(0 0 0 / 95%))
+    drop-shadow(0 0 1px rgb(10 30 250 / 95%)); */
+}
+
+/* 체류 시간 — 칸의 주인공 */
+.tileovl-label {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* 전체 기간 중 비율 — 시간 바로 아래 */
+.tileovl-share {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* 순위 — 왼쪽 위 모서리. 흰 바탕 원 대신 글자만 크게 */
+.tileovl-rank {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+/*
+ * 넓이 — 왼쪽 아래 모서리. 가는 글씨로 옅게.
+ * SVG 라 굵기를 정말로 200 까지 내릴 수 있다(폰트가 45 부터 지원).
+ */
+.tileovl-area {
+  font-size: 10px;
+  font-weight: 300;
+  opacity: 0.85;
+}
+
+/* 툴팁 — 화면 좌표를 따라다닌다 */
+.tileovl-tip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 5;
+  pointer-events: none;
+}
