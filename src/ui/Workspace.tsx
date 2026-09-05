@@ -344,9 +344,17 @@ export default function Workspace({ data, onReload }: Props) {
    * 보이는 점만 묶는다 — 기간을 좁히거나 점을 지우면 그대로 반영되어야
    * "지금 보는 것의 집계"가 된다.
    */
+  /*
+   * 격자 줌만 떼어 둔다 — mapZoom 은 확대 중 매 프레임 바뀌지만
+   * displayZoom 은 정수라 대개 같은 값이다. 이것을 의존성으로 삼아야
+   * 12.1 → 12.4 처럼 칸 크기가 그대로인 변화에 63MB 를 다시 집계하지
+   * 않는다.
+   */
+  const tileZoom = displayZoom(mapZoom);
+
   const tiles = useMemo(
-    () => (tileStay ? aggregateStays(visibleVisits, displayZoom(mapZoom)) : undefined),
-    [tileStay, visibleVisits, mapZoom],
+    () => (tileStay ? aggregateStays(visibleVisits, tileZoom) : undefined),
+    [tileStay, visibleVisits, tileZoom],
   );
 
 
@@ -611,17 +619,25 @@ ${formatAt(d.startMs, d.offsetMin)} ${offsetLabel(d.offsetMin)}`
             /*
              * 체류 집계의 격자 크기를 줌에 맞춘다.
              *
-             * 지금 줌을 곧바로 한 번 읽는다 — zoomend 만 걸어 두면 사용자가
+             * 지금 줌을 곧바로 한 번 읽는다 — 이벤트만 걸어 두면 사용자가
              * 확대·축소를 한 번도 하지 않은 동안 초기값(2)이 그대로 남아,
              * 화면은 동네를 보고 있는데 격자만 대륙 크기로 그려졌다.
              *
-             * flyTo(fitTo)처럼 프로그램이 옮기는 경우는 zoomend 가 아니라
-             * moveend 로 끝나기도 해서 둘 다 건다.
+             * zoomend 가 아니라 zoom 을 듣는다. zoomend 는 줌이 **끝난 뒤에**
+             * 오므로, 확대하는 동안 격자는 이전 줌 크기로 남고 지도만 커진다
+             * — 확대할수록 배율 차가 벌어져 격자가 어긋나 보였다.
+             *
+             * 매 프레임 불리지만 displayZoom 이 정수 단위라 실제 재집계는
+             * 정수 경계를 넘을 때만 일어난다. 같은 값이면 setState 가
+             * 리렌더를 걸지 않으므로 그 사이는 비용이 없다.
+             *
+             * move 도 함께 듣는다 — flyTo(fitTo)처럼 프로그램이 옮기는 경우
+             * zoom 이벤트 없이 끝나기도 한다.
              */
             setMapZoom(m.getZoom());
             const sync = () => setMapZoom(m.getZoom());
-            m.on("zoomend", sync);
-            m.on("moveend", sync);
+            m.on("zoom", sync);
+            m.on("move", sync);
           }}
           // 영역 드래그 중에는 클릭 픽을 끈다 — 드래그 끝의 클릭이
           // 방금 만든 선택을 지워 버린다
